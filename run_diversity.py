@@ -10,81 +10,84 @@ import allel
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
+from jackknife import jackknife
 sns.set_style('white')
 sns.set_style('ticks')
 
 
-def sfs_fx(ac_subpopscat):
-    """
-    note: should filter on segregating if only using subset of pops
-    note: only biallelic if >1 allele
-    is_biallelic_01 = ac_seg['all'].is_biallelic_01()[:]
-    ac1 = ac_seg['BFM'].compress(is_biallelic_01, axis=0)[:, :2]
-    ac2 = ac_seg['AOM'].compress(is_biallelic_01, axis=0)[:, :2]
-    """
-    ac1 = ac_subpopscat["PNG"]
-    ac2 = ac_subpopscat["Haiti"]
-    ac3 = ac_subpopscat["Mali"]
-    ac4 = ac_subpopscat["Kenya"]
-    fig, ax = plt.subplots(figsize=(8, 5))
-    sns.despine(ax=ax, offset=10)
-    sfs1 = allel.stats.sfs_folded_scaled(ac1)
-    allel.stats.plot_sfs_folded_scaled(sfs1, ax=ax, label='PNG',
-                                       n=ac1.sum(axis=1).max())
-    sfs2 = allel.stats.sfs_folded_scaled(ac2)
-    allel.stats.plot_sfs_folded_scaled(sfs2, ax=ax, label='Haiti',
-                                       n=ac2.sum(axis=1).max())
-    sfs3 = allel.stats.sfs_folded_scaled(ac3)
-    allel.stats.plot_sfs_folded_scaled(sfs3, ax=ax, label='Mali',
-                                       n=ac3.sum(axis=1).max())
-    sfs4 = allel.stats.sfs_folded_scaled(ac4)
-    allel.stats.plot_sfs_folded_scaled(sfs4, ax=ax, label='Kenya',
-                                       n=ac4.sum(axis=1).max())
-    ax.legend()
-    ax.set_title('Scaled folded site frequency spectra')
-    ax.set_xlabel('minor allele frequency')
-    return(None)
-
-
-def tajd(ac_subpops):
+def div_fx(ac_subpopscat, ac_subpopsdict, subpops, chrpos):
     """
     """
-    for pair in pairlist:
-        pop1 = pair.split("_")[0]
-        pop2 = pair.split("_")[1]
-        ac_seg = ac_subpops.compress(genotypes_seg[pair])
-    pos = variants_seg['POS'][:]
-    windows = allel.stats.moving_statistic(pos,
-                                           statistic=lambda v: [v[0],
-                                                                v[-1]],
-                                                                size=2000)
-    x = np.asarray(windows).mean(axis=1)
+    poplist = ["Haiti", "Mali", "Kenya", "PNG"]
+    for pop in poplist:
+        pop_idx = subpops[pop]
+        dip = (len(pop_idx)) * 2.0
+        # prc missing
+        prct = .80
+        acu = allel.AlleleCountsArray(ac_subpopscat[pop][:])
+        miss = (acu[:, 0] + acu[:, 1]) > (dip * prct)
+        # seg = acu.is_segregating()
+        # flt = miss * seg
+        flt = miss
+        blenW = int(round(sum(flt)/10))  # step size in SNP variants
+        ac = allel.AlleleCountsArray(ac_subpopscat[pop].compress(flt,
+                                     axis=0)[:, :2])
+        # tajd
+        d_window = allel.stats.diversity.moving_tajima_d(ac, blenW)
+        d_blocks = allel.stats.moving_statistic(d_window, statistic=np.mean,
+                                                size=1)
+        d_m, d_se, d_z, d_val = jackknife(d_blocks)
+        print("{}, TajD: {:.4f} +/- {:.4f}, z : {}".format(pop, d_m, d_se,
+                                                           d_z))
+        # pi
+        pi = allel.stats.diversity.mean_pairwise_difference(ac)
+        pi_blocks = allel.stats.moving_statistic(pi, statistic=np.mean,
+                                                 size=blenW)
+        pi_m, pi_se, pi_z, pi_val = jackknife(pi_blocks)
+        print("{}, pi: {:.4f} +/- {:.4f}, z : {}".format(pop, pi_m, pi_se,
+                                                         pi_z))
+        theta = []
+        for nchr in ac_subpopsdict.keys():
+            acu = allel.AlleleCountsArray(ac_subpopsdict[nchr][pop][:])
+            miss = (acu[:, 0] + acu[:, 1]) > (dip * prct)
+            # seg = acu.is_segregating()
+            # flt = miss * seg
+            flt = miss
+            blenWc = int(round(sum(flt)/10))  # step size of variants
+            acc = allel.AlleleCountsArray(ac_subpopsdict[nchr][pop].
+                                          compress(flt, axis=0)[:, :2])
+            pos = chrpos[nchr][flt]
+            # tajd
+            d_window = allel.stats.diversity.moving_tajima_d(acc, blenWc)
+            d_blocks = allel.stats.moving_statistic(d_window,
+                                                    statistic=np.mean, size=1)
+            d_m, d_se, d_z, d_val = jackknife(d_blocks)
+            print("{} {}, TajD: {:.4f} +/- {:.4f}, z : {}".format(nchr, pop,
+                                                                  d_m, d_se,
+                                                                  d_z))
+            # pi, already used for plotting similar to fst_hudson example
+            pi = allel.stats.diversity.mean_pairwise_difference(acc)
+            pi_blocks = allel.stats.moving_statistic(pi, statistic=np.mean,
+                                                     size=blenWc)
+            pi_m, pi_se, pi_z, pi_val = jackknife(pi_blocks)
+            print("{} {}, pi: {:.4f} +/- {:.4f}, z : {}".format(nchr, pop,
+                                                                pi_m, pi_se,
+                                                                pi_z))
+            # theta
+            t = allel.stats.diversity.watterson_theta(pos, acc)
+            theta.append(t)
+            print("{} {}, theta: {:.6f}".format(nchr, pop, t))
+            # theta windowed for plotting
+            stop = max(pos)
+            t_window = allel.stats.diversity.windowed_watterson_theta(
+                    pos, acc, size=int(stop/1000), start=1, stop=stop)
+            t_blocks = allel.stats.moving_statistic(t_window[0],
+                                                    statistic=np.mean, size=10)
+            t_m, t_se, t_z, t_val = jackknife(t_blocks)
+            print("{} {}, theta: {:.6f} +/- {:.6f}, z : {}".format(nchr, pop,
+                                                                   t_m, t_se,
+                                                                   t_z))
+        print("{}, theta: {:.6f} {:.6f}".format(pop, np.mean(theta),
+                                                np.std(theta)))
+    return(acc, pos)
 
-    # compute Tajima's D
-    y1, _, _ = allel.stats.windowed_tajima_d(pos, ac_seg['BFM'][:],
-                                             windows=windows)
-    y2, _, _ = allel.stats.windowed_tajima_d(pos, ac_seg['AOM'][:],
-                                             windows=windows)
-
-    # plot
-    fig, ax = plt.subplots(figsize=(12, 4))
-    sns.despine(ax=ax, offset=10)
-    ax.plot(x, y1, lw=.5, label='BFM')
-    ax.plot(x, y2, lw=.5, label='AOM')
-    ax.set_ylabel("Tajima's $D$")
-    ax.set_xlabel('Chromosome %s position (bp)' % chrom)
-    ax.set_xlim(0, pos.max())
-    ax.legend(loc='upper left', bbox_to_anchor=(1, 1))
-    return(None)
-
-
-def pi():
-    """
-    """
-    return(None)
-
-
-def ld():
-    """
-    """
-    return(None)

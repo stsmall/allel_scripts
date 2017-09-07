@@ -46,8 +46,8 @@ class Chr(object):
                                            ["variants"]["POS"])
         self.vtbl = allel.VariantChunkedTable(self.calls[self.name]["variants"], names=["POS", "REF", 'ALT'])
         if not gt:
-            self.haplotypes = allel.HaplotypeChunkedArray(self.calls[self.name]["calldata"])
-            self.genotypes = self.haplotypes.to_genotypes(2)
+            self.haplotypes = allel.HaplotypeChunkedArray(self.calls[self.name]["calldata"]["genotype"])
+            #self.genotypes = self.haplotypes.to_genotypes(2)
         else:
             self.genotypes = allel.GenotypeChunkedArray(self.calls[self.name]["calldata"]["genotype"])
 #        self.exonicPositions, _ = self.positions.locate_intersection_ranges(
