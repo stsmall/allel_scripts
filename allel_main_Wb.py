@@ -17,14 +17,14 @@ ac = gt.count_alleles(max_allele=2).compute
 """
 
 import allel
-import h5py
-import pandas as pd
-import pyfasta
 import argparse
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-import bisect
+# functions
+from allel_functions import makeh5fromvcf
+from allel_functions import loadgenome_extradata_fx
+from allel_functions import plotvars
+from allel_functions import misspos
+from allel_functions import plotstats
 
 from collections import defaultdict
 # made functions
@@ -37,7 +37,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-fa', '--fasta', help='path to fasta genome')
 parser.add_argument('-gff3', '--ggf3feature', help="path to gff3")
 parser.add_arguement('-v', "--vcf", help="path to vcf")
-parser.add_argument('--h5file', action="store_true", help="h5 exists")
+parser.add_argument('--h5', action="store_true", help="h5 exists")
 parser.add_arguement('-m', "--meta", required=True, help="path to meta data")
 parser.add_arguement('-s', "--samples", type=int, help="number samples")
 parser.add_arguement('-a', "--altnum", type=int, default=1,
@@ -45,137 +45,26 @@ parser.add_arguement('-a', "--altnum", type=int, default=1,
 args = parser.parse_args()
 
 
-def makeh5fromvcf(vcfin, altnum, hf5):
-    """
-    """
-    if hf5:
-        pass
-    else:
-        h5out = "{}.h5".format(vcfin.split(".")[:-2])
-        fieldsfromvcf = ['samples', 'calldata/GQ', 'variants/ALT',
-                         'variants/REF', 'variants/QUAL', 'variants/CHROM',
-                         'variants/POS', 'variants/AF', 'variants/AB',
-                         'variants/MQM', 'variants/DP', 'calldata/DP',
-                         'calldata/AD', 'calldata/GT']
-        allel.vcf_to_hdf5(vcfin, h5out, fields=fieldsfromvcf,
-                          types={'calldata/GQ': 'float32'}, alt_number=2)
-    callset = h5py.File(h5out, mode='r')
-    return(callset)
-
-
-def loadgenome_extradata_fx(fasta_handle, gff3_handle, meta):
-    """
-    """
-    genome = pyfasta.Fasta(fasta_handle, key_fn=lambda key: key.split()[0])
-    gff3 = allel.FeatureTable.from_gff3(gff3_handle)
-    meta = pd.read_csv(args.meta, delimiter=" ")
-    return(genome, gff3, meta)
-
-
-def plotvars(chrm, callset, window_size=10000, title=None, saved=False):
-    """
-    """
-#    chrm = chrm.decode("utf-8")
-    chrom = callset['variants/CHROM']
-    chrom_mask = np.where(chrom[:] == chrm)
-    pos = callset['variants/POS']
-    p = pos[:][chrom_mask]
-    varpos = allel.SortedIndex(p)
-    # setup windows
-    bins = np.arange(0, varpos.max(), window_size)
-    # use window midpoints as x coordinate
-    x = (bins[1:] + bins[:-1])/2
-    # compute variant density in each window
-    h, _ = np.histogram(varpos, bins=bins)
-    y = h / window_size
-    # plot
-    fig, ax = plt.subplots(figsize=(12, 3))
-    sns.despine(ax=ax, offset=10)
-    ax.plot(x, y)
-    ax.set_xlabel('Chromosome position (bp)')
-    ax.set_ylabel('Variant density (bp$^{-1}$)')
-    if title:
-        ax.set_title(title)
-    else:
-        ax.set_title(chrm.decode("utf-8"))
-    if saved:
-        fig.savefig("{}.vars.pdf".format(chrm.decode("utf-8")),
-                    bbox_inches='tight')
-
-
-def misspos(chrm, callset, pc, window_size=10000, title=None, saved=False):
-    """
-    """
-#    chrm = chrm.decode("utf-8")
-    chrom = callset['variants/CHROM']
-    chrom_mask = np.where(chrom[:] == chrm)
-    pos = callset['variants/POS']
-    p = pos[:][chrom_mask]
-    varpos = allel.SortedIndex(p)
-    bins = np.arange(0, varpos.max(), window_size)
-    # use window midpoints as x coordinate
-    x = bins
-    miss_site = pc[:][chrom_mask]
-    yy = []
-    for i, j in enumerate(x):
-        try:
-            left = bisect.bisect_left(varpos, j)
-            right = bisect.bisect_left(varpos, x[i+1]) - 1
-            yy.append(np.mean(miss_site[left:right]))
-        except:
-            yy.append(0)
-    y = np.array(yy)
-    # plot
-    fig, ax = plt.subplots(figsize=(12, 3))
-    sns.despine(ax=ax, offset=10)
-    ax.plot(x, y)
-    ax.set_xlabel('Chromosome position (bp)')
-    ax.set_ylabel('Missing Count')
-    if title:
-        ax.set_title(title)
-    else:
-        ax.set_title(chrm.decode("utf-8"))
-    if saved:
-        fig.savefig("{}.miss.pdf".format(chrm.decode("utf-8")),
-                    bbox_inches='tight')
-
-
-def plotstats(pc, title, saved=False):
-    """
-    """
-    fig, ax = plt.subplots(figsize=(12, 4))
-    sns.despine(ax=ax, offset=10)
-    left = np.arange(len(pc))
-    ax.bar(left, pc)
-    ax.set_xlim(0, len(pc))
-    ax.set_xlabel('Sample index')
-    ax.set_ylabel('Percent calls')
-    ax.set_title(title)
-    if saved:
-        fig.savefig("{}.pdf".format(title), bbox_inches='tight')
-
-
 if __name__ == '__main__':
     # load data args
     fasta_handle = args.fasta
     gff3_handle = args.gff3
-    meta = pd.read_csv(args.meta, delimiter=" ")
+    meta = args.meta
     vcfin = args.vcf
     samp = args.samples
     alleles = args.altnum
-    chrom = args.chromlist
     # start funcs
-    callset = makeh5fromvcf(vcfin, alleles)
-    genome, gff3, meta, chrlist = loadgenome_extradata_fx(fasta_handle,
-                                                          gff3_handle, meta,
-                                                          chrom)
+    callset = makeh5fromvcf(vcfin, alleles, args.h5)
+    genome, gff3, meta = loadgenome_extradata_fx(fasta_handle, gff3_handle,
+                                                 meta)
+    chrlist = np.unique(callset['variants/CHROM'][:])
     # some simple stats
     print("number of samples: {}".format(len(callset['samples'])))
-    chrlist = np.unique(chrom[:])
     print("list of loaded chromosomes: {}".format(chrlist))
     # variants over chrom for each chromosome
     for c in chrlist:
         plotvars(c, callset)
+
     # genotype object as array
     gtd = allel.GenotypeDaskArray(callset['calldata/GT'])  # must add compute()
     gt = allel.GenotypeArray(callset['calldata/GT'])
