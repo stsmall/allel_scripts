@@ -20,11 +20,7 @@ import allel
 import argparse
 import numpy as np
 # functions
-from allel_functions import makeh5fromvcf
-from allel_functions import loadgenome_extradata_fx
-from allel_functions import plotvars
-from allel_functions import misspos
-from allel_functions import plotstats
+import stat_fxs as sf
 
 from collections import defaultdict
 # made functions
@@ -54,16 +50,17 @@ if __name__ == '__main__':
     samp = args.samples
     alleles = args.altnum
     # start funcs
-    callset = makeh5fromvcf(vcfin, alleles, args.h5)
-    genome, gff3, meta = loadgenome_extradata_fx(fasta_handle, gff3_handle,
-                                                 meta)
+    callset = sf.makeh5fromvcf(vcfin, alleles, args.h5)
+    genome, gff3, meta = sf.loadgenome_extradata_fx(fasta_handle, gff3_handle,
+                                                    meta)
     chrlist = np.unique(callset['variants/CHROM'][:])
+    chrom = callset['variants/CHROM']
     # some simple stats
     print("number of samples: {}".format(len(callset['samples'])))
     print("list of loaded chromosomes: {}".format(chrlist))
     # variants over chrom for each chromosome
     for c in chrlist:
-        plotvars(c, callset)
+        sf.plotvars(c, callset)
 
     # genotype object as array
     gtd = allel.GenotypeDaskArray(callset['calldata/GT'])  # must add compute()
@@ -80,11 +77,11 @@ if __name__ == '__main__':
     dep = callset['calldata/DP']
     dp = np.mean(dep[:, :], axis=0)
     # function plots
-    plotstats(pc_het/n_variants, 'Heterozygous')
-    plotstats(pc_missing/n_variants, 'Missing')
-    plotstats(dp, 'Depth')
+    sf.plotstats(pc_het/n_variants, 'Heterozygous')
+    sf.plotstats(pc_missing/n_variants, 'Missing')
+    sf.plotstats(dp, 'Depth')
     for c in chrlist:
-        misspos(c, callset, pc_missing, window_size=10000, saved=True)
+        sf.misspos(c, callset, pc_missing, window_size=10000, saved=True)
 
     # PCA
     thinmiss = {}
