@@ -22,10 +22,11 @@ Chr1_0.ldfilter(Chr1_0.genotypes, size=100, step=50, thresh=.1, n_iter=1)
 """
 import numpy as np
 import allel
+import h5py
 
 
 class Chr(object):
-    def __init__(self, name, pop, calls):
+    def __init__(self, pop, calls):
         """
         name: chromosome to query
         calls: load data
@@ -33,20 +34,19 @@ class Chr(object):
             callset = h5py.File(callset_fn, mode='r')
             Chr1 = Chr("Wb_Chr1_0", callset)
         """
-        self.name = name
-        self.calls = calls
+        self.calls = h5py.File(calls, mode='r')  # requires premade h5
         self.pop = pop
+        self.chrm = self.calls['variants/CHROM']
 
-    def loadpos(self, meta):
+    def geno(self, name, meta):
         """
         pos: positions in the chromosome
         gt: genotype array
         sm: attached meta data
         """
         # get chrom
-        chrom = self.calls['variants/CHROM']
-        chrom_mask = np.where(chrom[:] == self.name)
-        # get chrom variant positions
+        chrom = self.chrm
+        chrom_mask = np.where(chrom[:] == name)
         p = self.calls['variants/POS']
         pos = p[:][chrom_mask]
         self.pos = allel.SortedIndex(pos)
@@ -54,41 +54,38 @@ class Chr(object):
         geno = allel.GenotypeArray(self.calls['calldata/GT'])
         gt = geno[:][chrom_mask]
         # get population data
-        if self.pop == 'ALL':
+        if self.pop == 'All':
             self.gt = gt
             self.sm = meta
-        elif type(p) is list:
-            samples = []
-            for p in self.pop:
-                samples.append(np.where(meta.Population == p)[0])
-            self.gt = gt[:, samples]
-            self.sm = meta[samples]
         else:
-            samples = np.where(meta.Population == self.pop)[0]
+            samples = meta.ix[meta.Population.isin(self.pop)].index.tolist()
             self.gt = gt[:, samples]
-            self.sm = meta[samples]
+            self.sm = meta.ix[samples]
 
-    def missing(self, genotypes, positions, prctmiss):
+    def miss(self, genotypes, positions, prctmiss):
         """
         """
-        missarray = np.ones(genotypes.n_variants, dtype=bool)
-        is_missing = genotypes.is_missing()
-        for i, miss in enumerate(is_missing):
-            if sum(miss)/float(genotypes.n_samples) > prctmiss:
-                missarray[i] = False
+#        missarray = np.ones(genotypes.n_variants, dtype=bool)
+#        is_missing = genotypes.is_missing()
+#        for i, miss in enumerate(is_missing):
+#            if sum(miss)/float(genotypes.n_samples) > prctmiss:
+#                # prctmiss = 0 for non-missing sites
+#                missarray[i] = False
+        misscount = genotypes.count_missing(axis=1)
+        missarray = misscount <= (genotypes.n_samples * prctmiss)
         # remove missing
-        self.gt_nm = genotypes.compress(missarray, axis=0)
+        self.gt_m = genotypes.compress(missarray, axis=0)
         # adjust positions
-        self.pos_nm = positions[missarray]
+        self.pos_m = positions[missarray]
 
-    def isseg(self, genotypes, positions):
+    def seg(self, genotypes, positions):
         """
         """
         var_seg = genotypes.count_alleles().is_segregating()
         self.pos_s = positions[var_seg]
         self.gt_s = genotypes.compress(var_seg)
 
-    def rmvsingletons(self, genotypes, positions, mac):
+    def mac(self, genotypes, positions, mac):
         """
         mac: minor allele count
         """
@@ -97,24 +94,6 @@ class Chr(object):
         fltsingle = (allelecounts.max_allele() == 1) &\
             (allelecounts[:, :2].min(axis=1) > mac)  # biallelic only
         # remove singletons
-        self.gt_mac = genotypes.compress(fltsingle, axis=0)
+        self.gt_c = genotypes.compress(fltsingle, axis=0)
         # adjust positions
-        self.pos_mac = positions[fltsingle]
-
-    def ldfilter(self, genotypes, positions, size, step, thresh,
-                 n_iter):
-        """
-        genotype: genotype array; self.genotypes
-        """
-        # here it is now 2d, so no longer genotypeClass
-        self.corr = genotypes.to_n_alt()
-        self.ldpos = positions
-        for i in range(n_iter):
-            loc_unlinked = allel.locate_unlinked(self.corr, size=size,
-                                                 step=step, threshold=thresh)
-            n = np.count_nonzero(loc_unlinked)
-            n_remove = self.corr.shape[0] - n
-            print('iteration', i+1, 'retaining', n, 'removing',
-                  n_remove, 'variants')
-            self.corr = self.corr.compress(loc_unlinked, axis=0)
-            self.ldpos = self.ldpos[loc_unlinked]
+        self.pos_c = positions[fltsingle]

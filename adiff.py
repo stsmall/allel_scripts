@@ -9,7 +9,6 @@ requires PLINK, ADMIXTURE, vcftools, allel
 
 import allel
 import subprocess
-import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 import pandas as pd
@@ -17,77 +16,6 @@ from jackknife import jackknife
 from sfs import jsfs_fx
 sns.set_style('white')
 sns.set_style('ticks')
-
-
-def plot_pca_coords(coords, model, pc1, pc2, ax, samples):
-    """
-    """
-    sns.despine(ax=ax, offset=5)
-    x = coords[:, pc1]
-    y = coords[:, pc2]
-    pop_colours = {
-        'Haiti': '#FF0000',
-        'Kenya': '#008000',
-        'Mali': '#00FFFF',
-        'PNG': '#90EE90'}
-    sample_population = samples.population.values
-    populations = samples.population.unique()
-    for pop in populations:
-        flt = (sample_population == pop)
-        ax.plot(x[flt], y[flt], marker='o', linestyle=' ',
-                color=pop_colours[pop],
-                label=pop, markersize=6, mec='k', mew=.5)
-    ax.set_xlabel('PC%s (%.1f%%)' % (pc1+1,
-                  model.explained_variance_ratio_[pc1]*100))
-    ax.set_ylabel('PC%s (%.1f%%)' % (pc2+1,
-                  model.explained_variance_ratio_[pc2]*100))
-
-
-def fig_pca(coords, model, title, sample_population, pc1, pc2):
-    """
-    """
-    fig = plt.figure(figsize=(10, 5))
-    ax = fig.add_subplot(1, 1, 1)
-    plot_pca_coords(coords, model, pc1, pc2, ax, sample_population)
-    ax.legend(bbox_to_anchor=(1, 1), loc='upper left')
-    fig.suptitle(title, y=1.02)
-    fig.tight_layout()
-    fig.savefig("{}.pdf".format(title), bbox_inches='tight')
-
-
-def hist_var(model):
-    """
-    """
-    fig, ax = plt.subplots()
-    sns.despine(ax=ax)
-    x = np.arange(10)
-    y = model.explained_variance_ratio_ * 100
-    ax.bar(x+.6, y, width=.8)
-    ax.set_xticks(x+1)
-    ax.set_xlim(0, 11)
-    ax.set_xlabel('component')
-    ax.set_ylabel('% variance explained')
-    fig.savefig("PCA_histvar.pdf", bbox_inches='tight')
-
-
-def pca_fx(gtthin, df_samples, pcall, nchr):
-    """
-    """
-    gnu = gtthin[:]  # uncompress
-    # PCA
-    coords, model = allel.pca(gnu, n_components=10, scaler='standard')
-    title = "PCA Chr:{}, var:{}".format(nchr, gnu.shape[0])
-    if pcall:
-        i = 0
-        while i < 9:
-            fig_pca(coords, model, title,
-                    df_samples, i, i+1)
-            i += 2
-    else:
-        fig_pca(coords, model, title, df_samples,
-                0, 1)
-    hist_var(model)
-    return(coords, model)
 
 
 def admixture_prog_fx(plink):
