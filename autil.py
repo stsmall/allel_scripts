@@ -92,7 +92,7 @@ def ldthin(geno, positions, method, mac=1, size=100, step=20, thresh=.1,
     return(gn, allel.SortedIndex(pos))
 
 
-def vcf2plink(thindict, vcf):
+def vcf2plink(thindict):
     """Takes a thinned file from allel, thins the original vcf to match, then
     converts the vcf to plink. Returns plink formatted vcf to run in ADMIXTURE
     and Treemix
@@ -103,13 +103,14 @@ def vcf2plink(thindict, vcf):
             for pos in thindict[nchr]:
                 tpos.write("{}\t{}\n".format(nchr.decode("utf-8", "strict"),
                                              pos))
-    command = "vcftools --vcf " + vcf + " --positions thin.pos --recode --out \
-    thinnedsites"
-    proc = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
-    proc.wait()
-    # call plink
-    command = "plink --make-bed thinnedsites.recode.vcf --allow-extra-chrom \
-    --out thinnedplink"
-    proc = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
-    proc.wait()
+#    if vcf:
+#        command = "vcftools --vcf " + vcf + " --positions thin.pos --recode --out \
+#        thinnedsites"
+#        proc = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
+#        proc.wait()
+#        # call plink
+#        command = "plink --make-bed thinnedsites.recode.vcf --allow-extra-chrom \
+#        --out thinnedplink"
+#        proc = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
+#        proc.wait()
     return(None)

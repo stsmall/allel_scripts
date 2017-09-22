@@ -119,7 +119,7 @@ if __name__ == '__main__':
         pcadict[c] = (coords, model)
 
     # ADMIXTURE input files
-    autil.vcf2plink(thinpos, vcfin)  # make input files
+    autil.vcf2plink(thinpos)  # make input files
 
     # FST, Fstatistics, doubletons, jsfs
     fstdict = {}
