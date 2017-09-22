@@ -9,6 +9,30 @@ Created on Fri Sep 15 15:40:01 2017
 import allel
 import numpy as np
 import subprocess
+import seaborn as sns
+
+
+def popcols(popdict):
+    """Set plot colors for each subpop
+    """
+    pop2color = {}
+    palette = sns.color_palette(n_colors=len(popdict.keys()))
+    for pop in popdict.keys():
+        pop2color[pop] = palette.pop()
+
+    return(pop2color)
+
+
+def subpops(var, meta):
+    """Define subpops
+    """
+    popdict = {}
+    if var.pop is not "All":
+        meta = meta.ix[meta.Population.isin(var.pop)]
+    for pop in meta.Population.unique():
+        popdict[pop] = meta[meta.Population == pop].index.tolist()
+
+    return(popdict)
 
 
 def jackknife(x):

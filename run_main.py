@@ -21,14 +21,13 @@ import argparse
 import numpy as np
 import pandas as pd
 import pyfasta
-import seaborn as sns
 # functions
 import astat
 from allel_class import Chr
 import apca as apca
 import autil as autil
 import adiff as ad
-import adiv as av
+#import adiv as av
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-fa', '--fasta', help='path to fasta genome')
@@ -84,28 +83,13 @@ if __name__ == '__main__':
 
     meta = "kirfol.meta.txt.csv"
     meta = pd.read_csv(meta, delimiter=",")
-#    meta.Population = meta.ChromForm
-    # load chr class, calls, pop, chrm
     var = Chr('All', 'KirFol.2L.flt.h5')
-
-    # define sub pops
-    popdict = {}
-    if var.pop is not "All":
-        meta = meta.ix[meta.Population.isin(var.pop)]
-    for pop in meta.Population.unique():
-        popdict[pop] = meta[meta.Population == pop].index.tolist()
-    # chromosome lists
+    popdict = autil.subpops(var, meta)
     chrlist = np.unique(var.chrm[:])
-
-    # plot colors
-    pop2color = {}
-    palette = sns.color_palette(n_colors=len(popdict.keys()))
-    for pop in popdict.keys():
-        pop2color[pop] = palette.pop()
-#    popdict['all'] = list(range(len(meta.Population)))
+    pop2color = autil.popcols(popdict)
 
     # number of samples and list of chromosomes
-    n_samples = len(var.calls['samples'])
+    n_samples = len(var.calls['samples\n'])
     print("number of samples: {}".format(n_samples))
     print("list of loaded chromosomes: {}".format(chrlist))
 
@@ -134,34 +118,34 @@ if __name__ == '__main__':
                                     bykary=True)
         pcadict[c] = (coords, model)
 
-    # ADMIXTURE / TREEMIX input files
+    # ADMIXTURE input files
     autil.vcf2plink(thinpos, vcfin)  # make input files
-#    # run admixture
-#    command = "bash run_admxiture.sh thinnedplink"
-#    proc = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
-#    proc.wait()
 
     # FST, Fstatistics, doubletons, jsfs
+    fstdict = {}
+    dxydict = {}
+    fstatdict = {}
+    doubdict = {}
     for c in chrlist:
         var.geno(c, meta)
         print("\nStats for Chromosome {}\n".format(c))
         # allele count object
         ac_subpops = var.gt.count_alleles_subpops(popdict, max_allele=2)
-        for pop in popdict.keys():
-            # structure stats
-            d2, dshare = ad.doubletons_fx(ac_subpopscat, subpops)
-            df_FST = ad.pairFST_fx(ac_subpopsdict, ac_subpopscat, chrcat_gt,
-                                   subpops, poplist, False, chrpos)
-            fstats = ad.Fstatistics_fx(ac_subpopsdict, subpops)
+        df_FST = ad.pairFST(c, ac_subpops, var, popdict)
+        fstdict[c] = df_FST
+        df_dxy = ad.Dxy(c, ac_subpops, var, popdict)
+        dxydict[c] = df_dxy
 
+        fstats = ad.Fstats(c, ac_subpops)
+        d2, dshare = ad.doubletons(c, ac_subpops)
 
-
-
-
-
-
-    # diversity stats
-    av.sfs_fx(ac_subpopscat)
+#    # Diversity statistics
+#    for c in chrlist:
+#        var.geno(c, meta)
+#        print("\nStats for Chromosome {}\n".format(c))
+#        # allele count object
+#        ac_subpops = var.gt.count_alleles_subpops(popdict, max_allele=2)
+#        av.sfs_fx(c, ac_subpops)
 
     # load feature data
 #    gff3.shape
