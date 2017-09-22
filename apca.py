@@ -70,13 +70,15 @@ def pca_fx(gnu, meta, nchr, pop2color, pcAll, population, bykary=False):
     """
     # PCA
     coords, model = allel.pca(gnu, n_components=10, scaler='patterson')
+#    corrds, model = allel.randomized_pca(gnu, n_components=10,
+#                                         scaler='patterson')
     title = "PCA Chr:{}, var:{}".format(nchr, gnu.shape[0])
     if population is 'All':
         samples = meta.Population.values
     else:
         samples = meta.Population[meta.Population.isin(population)].values
     if bykary:
-        s = meta.Population[meta.Population.isin(population)].index.tolist()
+        s = meta.Population[meta.Population.isin(samples)].index.tolist()
         samples = meta.ChromForm[s].values
         pop2color['Kiribina'] = '#FF0000'
         pop2color['Folonzo'] = '#008000'

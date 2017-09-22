@@ -22,13 +22,13 @@ import numpy as np
 import pandas as pd
 import pyfasta
 import seaborn as sns
-from collections import defaultdict
 # functions
 import astat
 from allel_class import Chr
 import apca as apca
-import aplot as aplot
 import autil as autil
+import adiff as ad
+import adiv as av
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-fa', '--fasta', help='path to fasta genome')
@@ -82,8 +82,8 @@ if __name__ == '__main__':
     genome, gff3, meta = loadgenome_extradata_fx(fasta_handle, gff3_handle,
                                                  meta)
 
-#    meta = "kirfol.meta.txt.csv"
-#    meta = pd.read_csv(meta, delimiter=",")
+    meta = "kirfol.meta.txt.csv"
+    meta = pd.read_csv(meta, delimiter=",")
 #    meta.Population = meta.ChromForm
     # load chr class, calls, pop, chrm
     var = Chr('All', 'KirFol.2L.flt.h5')
@@ -110,113 +110,58 @@ if __name__ == '__main__':
     print("list of loaded chromosomes: {}".format(chrlist))
 
     # Sample GT stats
-    gtd = allel.GenotypeDaskArray(var.calls['calldata/GT'])
-    pc_missing = gtd.count_missing(axis=0)[:].compute()  # per sample
-    miss = gtd.count_missing(axis=1)[:].compute()
-    pc_het = gtd.count_het(axis=0)[:].compute()  # per sample
-    n_variants = var.chrm[:].shape[0]
-    dep = var.calls['calldata/DP']
-    dp = np.mean(dep[:, :], axis=0)
-    aplot.plotstats(pc_het/n_variants, 'Heterozygous', pop2color)
-    aplot.plotstats(pc_missing/n_variants, 'Missing', pop2color)
-    aplot.plotstats(dp, 'Depth', pop2color)
-
-    # Chromosome GT Stats
-    for c in chrlist:
-        aplot.plotvars(c, var.calls)
-    for c in chrlist:
-        astat.misspos(c, var.calls, miss, n_samples, window_size=10000,
-                      saved=False)
-
+    miss = astat.gtstats(var.calls, pop2color, var.chrm.shape[0])
+    # Chr stats
+    astat.chrstats(chrlist, var.calls, miss, n_samples)
     # Population Stats
-    chrstatdict = defaultdict(dict)
-    for c in chrlist:
-        var.geno(c, meta)
-        print("\nStats for Chromosome {}\n".format(c))
-        # allele count object
-        ac_subpops = var.gt.count_alleles_subpops(popdict, max_allele=2)
-        # population stats: SNP, singleton, doubleton, #het inds, #homref, alt
-        for pop in popdict.keys():
-            seg = ac_subpops[pop].count_segregating()
-            sing = ac_subpops[pop].count_singleton()
-            doub = ac_subpops[pop].count_doubleton()
-            print("{} SNPs, singleton, doubleton: {} {} {}".format(pop, seg,
-                                                                   sing, doub))
-            gt_subpop = var.gt.take(popdict[pop], axis=1)
-            het = gt_subpop.count_het()
-            ref = gt_subpop.count_hom_alt()
-            alt = gt_subpop.count_hom_ref()
-            print("{} hets, homalt: {} {}".format(pop, het, alt))
-            chrstatdict[c][pop] = (seg, sing, doub)
-        priv = astat.privalleles(ac_subpops, popdict)
-        print(priv)
-        diff = astat.fixdiff(ac_subpops, popdict)
-        print(diff)
+    diff, chrstatdict = astat.popstats(chrlist, meta, popdict, var)
+
+    # PCA and LD thin
     thinpos = {}
     pcadict = {}
     gnudict = {}
     for c in chrlist:
+        # LD thin
         var.geno(c, meta)
-        # PCA and LD thin
-        # LD thin has default mac of 2
         var.miss(var.gt, var.pos, 0)  # use only sites without missing data
-        gn, thinp = autil.ldthin(var.gt_m, var.pos_m, "random")
+        gn, thinp = autil.ldthin(var.gt_m, var.pos_m, "thin", iters=5)
         gnudict[c] = gn
         thinpos[c] = thinp
     for c in gnudict.keys():
         # PCA
         gn = gnudict[c]
-        coords, model = apca.pca_fx(gn, meta, c, pop2color, False, var.pop)
+        coords, model = apca.pca_fx(gn, meta, c, pop2color, False, var.pop,
+                                    bykary=True)
         pcadict[c] = (coords, model)
 
+    # ADMIXTURE / TREEMIX input files
+    autil.vcf2plink(thinpos, vcfin)  # make input files
+#    # run admixture
+#    command = "bash run_admxiture.sh thinnedplink"
+#    proc = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
+#    proc.wait()
 
-
-    # ADMIXTURE
-    vcf2plink_fx(thinmiss, vcf)
-    admx.admixture_prog_fx('thinnedplink.bed')
     # FST, Fstatistics, doubletons, jsfs
-    poplist = ["PNG", "Haiti", "Mali", "Kenya"]
-    pairlist = ['PNG_Haiti', 'PNG_Mali', 'PNG_Kenya', 'Haiti_Kenya',
-                'Haiti_Mali', 'Kenya_Mali', 'Haiti_Africa', 'PNG_Africa']
-    png = meta[meta.population == "PNG"].index.tolist()
-    mali = meta[meta.population == "Mali"].index.tolist()
-    haiti = meta[meta.population == "Haiti"].index.tolist()
-    kenya = meta[meta.population == "Kenya"].index.tolist()
-    subpops = {
-            'PNG': png,
-            'Haiti': haiti,
-            'Kenya': kenya,
-            'Mali': mali,
-            'Africa': mali + kenya,
-            'PNG_Haiti': png + haiti,
-            'PNG_Mali': png + mali,
-            'PNG_Kenya': png + kenya,
-            'Haiti_Kenya': haiti + kenya,
-            'Haiti_Mali': haiti + mali,
-            'Kenya_Mali': kenya + mali,
-            'Haiti_Africa': haiti + mali + kenya,
-            'PNG_Africa': png + mali + kenya
-            }
-    # allele counts for all subpops
-    ac_subpopsdict = {}
-    for nchr in chrlist:
-        ac_subchr = chrdict[nchr].genotypes.count_alleles_subpops(
-                subpops, max_allele=1)
-        ac_subpopsdict[nchr] = ac_subchr
-    # concatenate all chr for each pop
-    ac_subpopscat = {}
-    for pop in subpops.keys():
-        ac_sub = []
-        for nchr in chrlist:
-            ac_sub.append(ac_subpopsdict[nchr][pop])
-        ac_subpopscat[pop] = chrcat_fx(ac_sub)
-    # structure stats
-    d2, dshare = admx.doubletons_fx(ac_subpopscat, subpops)
-    df_FST = admx.pairFST_fx(ac_subpopsdict, ac_subpopscat, chrcat_gt, subpops, poplist,
-                    False, chrpos)
-    fstats = admx.Fstatistics_fx(ac_subpopsdict, subpops)
+    for c in chrlist:
+        var.geno(c, meta)
+        print("\nStats for Chromosome {}\n".format(c))
+        # allele count object
+        ac_subpops = var.gt.count_alleles_subpops(popdict, max_allele=2)
+        for pop in popdict.keys():
+            # structure stats
+            d2, dshare = ad.doubletons_fx(ac_subpopscat, subpops)
+            df_FST = ad.pairFST_fx(ac_subpopsdict, ac_subpopscat, chrcat_gt,
+                                   subpops, poplist, False, chrpos)
+            fstats = ad.Fstatistics_fx(ac_subpopsdict, subpops)
+
+
+
+
+
+
+
     # diversity stats
-    div.sfs_fx(ac_subpopscat)
+    av.sfs_fx(ac_subpopscat)
 
     # load feature data
 #    gff3.shape

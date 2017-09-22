@@ -8,28 +8,13 @@ requires PLINK, ADMIXTURE, vcftools, allel
 """
 
 import allel
-import subprocess
 import seaborn as sns
 import numpy as np
 import pandas as pd
-from jackknife import jackknife
-from sfs import jsfs_fx
+from autil import jackknife
+from asfs import jsfs_fx
 sns.set_style('white')
 sns.set_style('ticks')
-
-
-def admixture_prog_fx(plink):
-    """
-    """
-    for k in range(5):
-        command = "admixture --cv " + plink + " " + k + " | tee log" + k\
-                  + ".out"
-        proc = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
-        proc.wait()
-
-    # PLOT
-
-    return(None)
 
 
 def df_fst(ac1, ac2, pos, chrom, blen, pair):

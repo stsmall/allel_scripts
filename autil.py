@@ -8,6 +8,7 @@ Created on Fri Sep 15 15:40:01 2017
 
 import allel
 import numpy as np
+import subprocess
 
 
 def jackknife(x):
@@ -33,8 +34,8 @@ def jackknife(x):
     return(m, se, z, vals)
 
 
-def ldthin(geno, positions, method, mac=2, size=100, step=20, thresh=.1,
-           iters=5):
+def ldthin(geno, positions, method, mac=1, size=100, step=20, thresh=.1,
+           iters=1):
     """.take if coord, .compress if mask
     """
     ac = geno.count_alleles()
@@ -63,5 +64,28 @@ def ldthin(geno, positions, method, mac=2, size=100, step=20, thresh=.1,
             print("iteration {} retaining {} removing {} variants".format(i+1,
                   n, n_remove))
             gn = gn.compress(loc_unlinked, axis=0)
-            pos = positions[loc_unlinked]
+            pos = pos[loc_unlinked]
     return(gn, allel.SortedIndex(pos))
+
+
+def vcf2plink(thindict, vcf):
+    """Takes a thinned file from allel, thins the original vcf to match, then
+    converts the vcf to plink. Returns plink formatted vcf to run in ADMIXTURE
+    and Treemix
+    Requires VCFTOOLS and PLINK1.9
+    """
+    with open("thin.pos", 'w') as tpos:
+        for nchr in thindict.keys():
+            for pos in thindict[nchr]:
+                tpos.write("{}\t{}\n".format(nchr.decode("utf-8", "strict"),
+                                             pos))
+    command = "vcftools --vcf " + vcf + " --positions thin.pos --recode --out \
+    thinnedsites"
+    proc = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
+    proc.wait()
+    # call plink
+    command = "plink --make-bed thinnedsites.recode.vcf --allow-extra-chrom \
+    --out thinnedplink"
+    proc = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
+    proc.wait()
+    return(None)
