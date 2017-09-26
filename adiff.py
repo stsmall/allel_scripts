@@ -8,48 +8,59 @@ requires PLINK, ADMIXTURE, vcftools, allel
 """
 
 import allel
-import seaborn as sns
 import numpy as np
-import pandas as pd
-from autil import jackknife
-from asfs import jsfs_fx
+from itertools import combinations
+import matplotlib.pyplot as plt
+import seaborn as sns
 sns.set_style('white')
 sns.set_style('ticks')
 
 
-def doubletons_fx(ac_subpopscat, subpops):
+def shared_doubletons(ac_subpops):
     """
-    double: dict(list)
-        PNG: ([False, False, True ...
     """
     # count doubletons
     d2 = {}
     dshare = {}
-    for pop in subpops.keys():
-        d2[pop] = ac_subpopscat[pop].count_doubleton(allele=1)
-    for pop in d2.keys():
-        if "_" in pop:
-            if "Africa" in pop:
-                dshare[pop] = d2[pop.split("_")[0]] + d2["Mali"]\
-                    + d2["Kenya"] - d2[pop]
-            else:
-                dshare[pop] = d2[pop.split("_")[0]] + d2[pop.split("_")[1]]\
-                    - d2[pop]
-        else:
-            pass
-    print("{}".format(d2))
-    print("{}".format(dshare))
-    return(d2, dshare)
+    for pop in ac_subpops.keys():
+        d2[pop] = ac_subpops[pop].is_doubleton(allele=1)
+    for x, y in combinations(ac_subpops.keys(), 2):
+        s = np.sum([d2[x], d2[y]], axis=0)
+        sd = np.nonzero(s == 2)[0].shape[0]
+        dshare["{}-{}".format(x, y)] = sd
+    print("{}".format(sd))
+    return(dshare)
 
 
-def allelecount_pair(ac_subpopsdict, ac_subpopscat, chrcat_gt, subpops,
-                     pairlist, jsfs_r, chrpos):
+def jsfs_plot(jsfs, pop1, pop2, fold, save):
     """
     """
-    # jsfs
-    if jsfs_r:
-        jsfs = allel.stats.joint_sfs(ac1[:, 1], ac2[:, 1])
-        jsfsf = allel.stats.joint_sfs_folded(ac1[:, :2], ac2[:, :2])
-        jsfs_fx(jsfs, jsfsf, pop1, pop2)
-
+    fig, ax = plt.subplots(figsize=(6, 6))
+    if fold:
+        allel.stats.plot_joint_sfs_folded(jsfs, ax=ax)
+        title = "jSFS Folded"
+    else:
+        allel.stats.plot_joint_sfs(jsfs, ax=ax)
+        title = "jSFS Polarized"
+    fig.suptitle(title, y=1.02)
+    ax.set_ylabel('Alternate allele count, {}'.format(pop1))
+    ax.set_xlabel('Alternate allele count, {}'.format(pop2))
+    if save:
+        fig.savefig("jSFS.{}-{}.pdf".format(pop1, pop2), bbox_inches='tight')
     return(None)
+
+
+def jsfs(ac_subpops, fold=True, save=False):
+    """
+    """
+    jsfsdict = {}
+    for x, y in combinations(ac_subpops.keys(), 2):
+        ac1 = ac_subpops[x]
+        ac2 = ac_subpops[y]
+        if fold:
+            jsfs = allel.stats.joint_sfs_folded(ac1[:, :2], ac2[:, :2])
+        else:
+            jsfs = allel.stats.joint_sfs(ac1[:, 1], ac2[:, 1])  # here 1 is alt count
+        jsfs_plot(jsfs, x, y, fold, save)
+        jsfsdict["{}-{}".format(x, y)] = jsfs
+    return(jsfsdict)

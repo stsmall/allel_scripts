@@ -8,7 +8,6 @@ Created on Fri Sep 15 15:40:01 2017
 
 import allel
 import numpy as np
-import subprocess
 import seaborn as sns
 
 
@@ -19,19 +18,28 @@ def popcols(popdict):
     palette = sns.color_palette(n_colors=len(popdict.keys()))
     for pop in popdict.keys():
         pop2color[pop] = palette.pop()
-
+#    if "Kiribina" in popdict.keys() and "Folonzo" in popdict.keys():
+#        pop2color['Kiribina'] = '#FF0000'
+#        pop2color['Folonzo'] = '#008000'
     return(pop2color)
 
 
-def subpops(var, meta):
+def subpops(var, meta, kary=False):
     """Define subpops
     """
     popdict = {}
-    if var.pop is not "All":
-        meta = meta.ix[meta.Population.isin(var.pop)]
-    for pop in meta.Population.unique():
-        popdict[pop] = meta[meta.Population == pop].index.tolist()
-
+    if kary:
+        if var.pop is not "All":
+            meta = meta.ix[meta.Population.isin(var.pop)]
+        else:
+            pass  # meta = meta
+        for kar in meta.ChromForm.unique():
+            popdict[kar] = meta[meta.ChromForm == kar].index.tolist()
+    else:
+        if var.pop is not "All":
+            meta = meta.ix[meta.Population.isin(var.pop)]
+        for pop in meta.Population.unique():
+            popdict[pop] = meta[meta.Population == pop].index.tolist()
     return(popdict)
 
 

@@ -26,8 +26,12 @@ import astat
 from allel_class import Chr
 import apca as apca
 import autil as autil
+import afst as afst
+import adxy as adxy
 import adiff as ad
-#import adiv as av
+from af234 import pF2
+import asfs as asfs
+import adiv as av
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-fa', '--fasta', help='path to fasta genome')
@@ -115,7 +119,7 @@ if __name__ == '__main__':
         # PCA
         gn = gnudict[c]
         coords, model = apca.pca_fx(gn, meta, c, pop2color, False, var.pop,
-                                    bykary=True)
+                                    bykary=False)
         pcadict[c] = (coords, model)
 
     # ADMIXTURE input files
@@ -124,49 +128,30 @@ if __name__ == '__main__':
     # FST, Fstatistics, doubletons, jsfs
     fstdict = {}
     dxydict = {}
-    fstatdict = {}
+    f2dict = {}
     doubdict = {}
+    jsfsdict = {}
     for c in chrlist:
         var.geno(c, meta)
         print("\nStats for Chromosome {}\n".format(c))
         # allele count object
         ac_subpops = var.gt.count_alleles_subpops(popdict, max_allele=2)
-        df_FST = ad.pairFST(c, ac_subpops, var, popdict)
+        df_FST = afst.pairFST(c, ac_subpops, var, popdict)
         fstdict[c] = df_FST
-        df_dxy = ad.Dxy(c, ac_subpops, var, popdict)
+        df_dxy = adxy.pairDxy(c, ac_subpops, var, popdict)
         dxydict[c] = df_dxy
+        dshare = ad.shared_doubletons(ac_subpops)
+        doubdict[c] = dshare
+        jsfsdict = ad.jsfs(ac_subpops)
+        f2 = pF2(c, ac_subpops)
+        f2dict[c] = f2
 
-        fstats = ad.Fstats(c, ac_subpops)
-        d2, dshare = ad.doubletons(c, ac_subpops)
-
-#    # Diversity statistics
-#    for c in chrlist:
-#        var.geno(c, meta)
-#        print("\nStats for Chromosome {}\n".format(c))
-#        # allele count object
-#        ac_subpops = var.gt.count_alleles_subpops(popdict, max_allele=2)
-#        av.sfs_fx(c, ac_subpops)
-
-    # load feature data
-#    gff3.shape
-#    np.unique(gff3.type)
-#    is_CDS = gff3[(gff3.type == b'CDS')]
-#    is_CDS.shape
-
-#        x = []
-#    for key in posDict:
-#        x.append(list(posDict[key]))
-#    allel.SortedMultiIndex(chromlist,[list(posDict)])
-#    # stats
-#    vtblCounter = 0
-#    for name in vtblDict.keys():
-#        print("{}:{}".format(name, len(vtblDict[name])))
-#        vtblCounter += len(vtblDict[name])
-#    print("total:{}".format(vtblCounter))
-#    # stats
-#    genosCounter = 0
-#    for name in genosDict.keys():
-#        print("{}:{}".format(name, len(genosDict[name])))
-#        vtblCounter += len(genosDict[name])
-#    print("total:{}".format(genosCounter))
-    # start admixture
+    # Diversity statistics
+    sfsdict = {}
+    for c in chrlist:
+        var.geno(c, meta)
+        print("\nStats for Chromosome {}\n".format(c))
+        # allele count object
+        ac_subpops = var.gt.count_alleles_subpops(popdict, max_allele=2)
+        sfs = asfs.sfs_plot(c, ac_subpops)
+        sfsdict[c] = sfs

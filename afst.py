@@ -9,13 +9,76 @@ Created on Fri Sep 22 15:29:50 2017
 import allel
 import numpy as np
 from itertools import combinations
-import matplot as plt
+import matplotlib.pyplot as plt
 import seaborn as sns
 sns.set_style('white')
 sns.set_style('ticks')
 
 
-def wcfst(popdict, ac_subpops, var, blenw=10000, downsample=False):
+def plot_fst(fstdict, pops, chrom, save=False):
+    """Genome plot of FST along the chrom
+    """
+    for p in pops:
+        f = [key for key in fstdict.keys() if p in key]
+        fig, ax = plt.subplots(figsize=(10, 4))
+        sns.despine(ax=ax, offset=5)
+        m = []
+        title = "{}_FST".format(p)
+        for pp in f:
+            m.extend(fstdict[pp][3][0])
+            ax.plot(fstdict[pp][3][0], fstdict[pp][3][1], lw=.5, label=pp)
+        ax.set_ylabel('$F_{ST}$')
+        ax.set_xlabel('Chromosome {} position (bp)'.format(chrom))
+        ax.set_xlim(0, max(m))
+        ax.legend(loc='upper left', bbox_to_anchor=(1, 1))
+        fig.suptitle(title, y=1.02)
+        fig.tight_layout()
+        if save:
+            fig.savefig("{}.pdf".format(title), bbox_inches='tight')
+    return(None)
+
+
+def fstwindWC(geno, pop1_ix, pop2_ix, pos, blen):
+    """
+    """
+    wc, se, vb, _ =\
+        allel.stats.blockwise_weir_cockerham_fst(geno,
+                                                 subpops=[pop1_ix, pop2_ix],
+                                                 blen=blen, max_allele=1)
+    x = allel.stats.moving_statistic(pos,
+                                     statistic=lambda v: (v[0] + v[-1])/2,
+                                     size=blen)
+    return(x, vb)
+
+
+def fstwindHD(ac1, ac2, pos, blen):
+    """
+    """
+    fst, se, vb, _ = allel.stats.blockwise_hudson_fst(ac1, ac2, blen)
+    x = allel.stats.moving_statistic(pos,
+                                     statistic=lambda v: (v[0] + v[-1])/2,
+                                     size=blen)
+    return(x, vb)
+
+
+def fstchromHD(ac1, ac2, blen):
+    """
+    """
+    fst, se, vb, _ = allel.stats.blockwise_hudson_fst(ac1, ac2, blen)
+    return(fst, se)
+
+
+def fstchromWC(geno, pop1_ix, pop2_ix, blenw):
+    """Chromosome average
+    """
+    wc, se, vb, _ =\
+        allel.stats.blockwise_weir_cockerham_fst(geno,
+                                                 subpops=[pop1_ix, pop2_ix],
+                                                 blen=blenw, max_allele=1)
+    return(wc, se)
+
+
+def wcfst(popdict, ac_subpops, var, blenw=10000, downsample=False, plot=False):
     """Calculates Weir and Cockerham FST
     """
     fstdict = {}
@@ -50,19 +113,17 @@ def wcfst(popdict, ac_subpops, var, blenw=10000, downsample=False):
         snp_fst = (a / (a + b + c))[:, 0]  # dist FST
         snp_fst = snp_fst[~np.isnan(snp_fst)]
         # chromosome avg
-        fst_wc, se_wc, vb_wc, _ =\
-            allel.stats.blockwise_weir_cockerham_fst(geno,
-                                                     subpops=[pop1_ix,
-                                                              pop2_ix],
-                                                     blen=blenw, max_allele=1)
-        fst_windowed = plot_fst(vb_wc, posflt, blenw, var.chrm)
+        fst_wc, se_wc = fstchromWC(geno, pop1_ix, pop2_ix, blenw)
+        fst_windowed = fstwindWC(geno, pop1_ix, pop2_ix, posflt, int(blenw/5))
         fstdict["{}-{}".format(x, y)] = (snp_fst, fst_wc, se_wc, fst_windowed)
         gtdict["{}-{}".format(x, y)] = geno
         posdict["{}-{}".format(x, y)] = posflt
+    if plot:
+        plot_fst(fstdict, list(ac_subpops.keys()), var.chrm)
     return(fstdict, gtdict, posdict)
 
 
-def hdfst(ac_subpops, var, blenw=10000):
+def hdfst(ac_subpops, var, blenw=10000, plot=False):
     """ Hudson FST
     """
     fstdict = {}
@@ -74,42 +135,28 @@ def hdfst(ac_subpops, var, blenw=10000):
         flt = acu.is_segregating() & (acu.max_allele() == 1)
         print('retaining', np.count_nonzero(flt), 'SNPs')
         posflt = pos[flt]
-        ac1 = allel.AlleleCountsArray(ac_subpops[x].compress(flt, axis=0)[:, :2])
-        ac2 = allel.AlleleCountsArray(ac_subpops[y].compress(flt, axis=0)[:, :2])
+        ac1 = allel.AlleleCountsArray(ac_subpops[x].compress(flt,
+                                                             axis=0)[:, :2])
+        ac2 = allel.AlleleCountsArray(ac_subpops[y].compress(flt,
+                                                             axis=0)[:, :2])
         num, dem = allel.stats.hudson_fst(ac1, ac2)
         snp_fst = num / dem
-        fst_hd, se_hd, vb_hd, _ =\
-            allel.stats.blockwise_hudson_fst(ac1, ac2, blen=blenw)
-        fst_windowed = plot_fst(vb_hd, posflt, blenw, var.chrm)
+        fst_hd, se_hd = fstchromHD(ac1, ac2, blenw)
+
+        fst_windowed = fstwindHD(ac1, ac2, posflt, int(blenw/5))
         fstdict["{}-{}".format(x, y)] = (snp_fst, fst_hd, se_hd, fst_windowed)
         posdict["{}-{}".format(x, y)] = posflt
         acdict["{}-{}".format(x, y)] = (ac1, ac2)
+    if plot:
+        plot_fst(fstdict, list(ac_subpops.keys()), var.chrm)
     return(fstdict, acdict, posdict)
 
 
-def plot_fst(vb, pos, blen, chrom):
-    """Genome plot of FST along the chrom
-    """
-    y = vb
-    # use the block centres as the X coordinate
-    x = allel.stats.moving_statistic(pos,
-                                     statistic=lambda v: (v[0] + v[-1])/2,
-                                     size=blen)
-    # plot
-    fig, ax = plt.subplots(figsize=(10, 4))
-    sns.despine(ax=ax, offset=5)
-    ax.plot(x, y, 'k-', lw=.5)
-    ax.set_ylabel('$F_{ST}$')
-    ax.set_xlabel('Chromosome %s position (bp)' % chrom)
-    ax.set_xlim(0, pos.max())
-    return(x, y)
-
-
-def pairFST_fx(c, ac_subpops, var, popdict, wc=False):
+def pairFST(c, ac_subpops, var, popdict, wc=False):
     """
     """
     if wc:
-        fstdict, gtdict, posdict = wcfst(popdict, var)
+        fstdict, gtdict, posdict = wcfst(popdict, ac_subpops, var)
     else:
         fstdict, acdict, posdict = hdfst(ac_subpops, var)
 
