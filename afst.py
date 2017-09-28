@@ -15,21 +15,19 @@ sns.set_style('white')
 sns.set_style('ticks')
 
 
-def plot_fst(fstdict, pops, chrom, save=False):
+def plot_fst(fstdict, pops, chrom, csize, save=False):
     """Genome plot of FST along the chrom
     """
     for p in pops:
         f = [key for key in fstdict.keys() if p in key]
         fig, ax = plt.subplots(figsize=(10, 4))
         sns.despine(ax=ax, offset=5)
-        m = []
         title = "{}_FST".format(p)
         for pp in f:
-            m.extend(fstdict[pp][3][0])
             ax.plot(fstdict[pp][3][0], fstdict[pp][3][1], lw=.5, label=pp)
         ax.set_ylabel('$F_{ST}$')
         ax.set_xlabel('Chromosome {} position (bp)'.format(chrom))
-        ax.set_xlim(0, max(m))
+        ax.set_xlim(0, csize)
         ax.legend(loc='upper left', bbox_to_anchor=(1, 1))
         fig.suptitle(title, y=1.02)
         fig.tight_layout()
@@ -78,7 +76,8 @@ def fstchromWC(geno, pop1_ix, pop2_ix, blenw):
     return(wc, se)
 
 
-def wcfst(popdict, ac_subpops, var, blenw=10000, downsample=False, plot=False):
+def wcfst(c, csize, popdict, ac_subpops, var, plot, blenw=10000,
+          downsample=False, nwindow=100):
     """Calculates Weir and Cockerham FST
     """
     fstdict = {}
@@ -87,9 +86,11 @@ def wcfst(popdict, ac_subpops, var, blenw=10000, downsample=False, plot=False):
     for x, y in combinations(ac_subpops.keys(), 2):
         acu = ac_subpops[x] + ac_subpops[y]
         flt = acu.is_segregating() & (acu.max_allele() == 1)
-        print('retaining', np.count_nonzero(flt), 'SNPs')
+        print("{} retaining {} SNPs".format("{}-{}".format(x, y),
+                                            np.count_nonzero(flt)))
         posflt = var.pos[flt]
         geno = var.gt.compress(flt, axis=0)
+        # TODO: downsample
         if downsample:
             l1 = len(popdict[x])
             l2 = len(popdict[y])
@@ -114,26 +115,27 @@ def wcfst(popdict, ac_subpops, var, blenw=10000, downsample=False, plot=False):
         snp_fst = snp_fst[~np.isnan(snp_fst)]
         # chromosome avg
         fst_wc, se_wc = fstchromWC(geno, pop1_ix, pop2_ix, blenw)
-        fst_windowed = fstwindWC(geno, pop1_ix, pop2_ix, posflt, int(blenw/5))
+        windlen = int(csize / nwindow)
+        fst_windowed = fstwindWC(geno, pop1_ix, pop2_ix, posflt, windlen)
         fstdict["{}-{}".format(x, y)] = (snp_fst, fst_wc, se_wc, fst_windowed)
         gtdict["{}-{}".format(x, y)] = geno
         posdict["{}-{}".format(x, y)] = posflt
     if plot:
-        plot_fst(fstdict, list(ac_subpops.keys()), var.chrm)
+        plot_fst(fstdict, list(ac_subpops.keys()), c, csize)
     return(fstdict, gtdict, posdict)
 
 
-def hdfst(ac_subpops, var, blenw=10000, plot=False):
+def hdfst(c, csize, ac_subpops, pos, plot, blenw=10000, nwindow=100):
     """ Hudson FST
     """
     fstdict = {}
     acdict = {}
     posdict = {}
-    pos = var.pos
     for x, y in combinations(ac_subpops.keys(), 2):
         acu = ac_subpops[x] + ac_subpops[y]
         flt = acu.is_segregating() & (acu.max_allele() == 1)
-        print('retaining', np.count_nonzero(flt), 'SNPs')
+        print("{} retaining {} SNPs".format("{}-{}".format(x, y),
+                                            np.count_nonzero(flt)))
         posflt = pos[flt]
         ac1 = allel.AlleleCountsArray(ac_subpops[x].compress(flt,
                                                              axis=0)[:, :2])
@@ -142,22 +144,23 @@ def hdfst(ac_subpops, var, blenw=10000, plot=False):
         num, dem = allel.stats.hudson_fst(ac1, ac2)
         snp_fst = num / dem
         fst_hd, se_hd = fstchromHD(ac1, ac2, blenw)
-
-        fst_windowed = fstwindHD(ac1, ac2, posflt, int(blenw/5))
+        windlen = int(csize / nwindow)
+        fst_windowed = fstwindHD(ac1, ac2, posflt, windlen)
         fstdict["{}-{}".format(x, y)] = (snp_fst, fst_hd, se_hd, fst_windowed)
         posdict["{}-{}".format(x, y)] = posflt
         acdict["{}-{}".format(x, y)] = (ac1, ac2)
     if plot:
-        plot_fst(fstdict, list(ac_subpops.keys()), var.chrm)
+        plot_fst(fstdict, list(ac_subpops.keys()), c, csize)
     return(fstdict, acdict, posdict)
 
 
-def pairFST(c, ac_subpops, var, popdict, wc=False):
+def pairFST(c, csize, ac_subpops, var, popdict, wc=False, plot=False):
     """
     """
     if wc:
-        fstdict, gtdict, posdict = wcfst(popdict, ac_subpops, var)
+        fstdict, gtdict, posdict = wcfst(c, csize, popdict, ac_subpops, var,
+                                         plot)
     else:
-        fstdict, acdict, posdict = hdfst(ac_subpops, var)
+        fstdict, acdict, posdict = hdfst(c, csize, ac_subpops, var.pos, plot)
 
     return(fstdict)

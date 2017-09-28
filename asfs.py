@@ -13,7 +13,7 @@ sns.set_style('white')
 sns.set_style('ticks')
 
 
-def sfs_plot(ac_subpops, save=False, fold=True, scale=True):
+def sfs_plot(c, ac_subpops, save=False, fold=True, scale=True):
     """
     note: should filter on segregating if only using subset of pops
     note: only biallelic if >1 allele
@@ -42,8 +42,8 @@ def sfs_plot(ac_subpops, save=False, fold=True, scale=True):
         allel.stats.plot_sfs_folded_scaled(sfsdict[pop], ax=ax, label=pop,
                                            n=ac1.sum(axis=1).max())
     ax.legend()
-    ax.set_title('Scaled folded site frequency spectra')
+    ax.set_title('{} Scaled folded site frequency spectra'.format(c))
     ax.set_xlabel('minor allele frequency')
     if save:
-        fig.savefig("ScaledSFS.pdf", bbox_inches='tight')
+        fig.savefig("ScaledSFS-{}.pdf".format(c), bbox_inches='tight')
     return(sfsdict)

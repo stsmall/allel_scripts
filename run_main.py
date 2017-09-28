@@ -89,7 +89,13 @@ if __name__ == '__main__':
     meta = pd.read_csv(meta, delimiter=",")
     var = Chr('All', 'KirFol.2L.flt.h5')
     popdict = autil.subpops(var, meta)
-    chrlist = np.unique(var.chrm[:])
+#    chrlist = np.unique(var.chrm[:])
+    chrlist = [b'scaffold12|size1081276', b'scaffold1|size7451746']
+    chrlen = {}
+    for a in chrlist:
+        k = a.decode('utf-8').split('|')
+        s = int(k[1].lstrip('size'))
+        chrlen[a] = s
     pop2color = autil.popcols(popdict)
 
     # number of samples and list of chromosomes
@@ -110,6 +116,7 @@ if __name__ == '__main__':
     gnudict = {}
     for c in chrlist:
         # LD thin
+        print(c)
         var.geno(c, meta)
         var.miss(var.gt, var.pos, 0)  # use only sites without missing data
         gn, thinp = autil.ldthin(var.gt_m, var.pos_m, "thin", iters=5)
@@ -125,6 +132,8 @@ if __name__ == '__main__':
     # ADMIXTURE input files
     autil.vcf2plink(thinpos)  # make input files
 
+    # TODO: cut partial windows
+
     # FST, Fstatistics, doubletons, jsfs
     fstdict = {}
     dxydict = {}
@@ -136,18 +145,22 @@ if __name__ == '__main__':
         print("\nStats for Chromosome {}\n".format(c))
         # allele count object
         ac_subpops = var.gt.count_alleles_subpops(popdict, max_allele=2)
-        df_FST = afst.pairFST(c, ac_subpops, var, popdict)
+        df_FST = afst.pairFST(c, chrlen[c], ac_subpops, var, popdict,
+                              plot=True)
         fstdict[c] = df_FST
-        df_dxy = adxy.pairDxy(c, ac_subpops, var, popdict)
+        df_dxy = adxy.pairDxy(c, chrlen[c], ac_subpops, var.pos, plot=True)
         dxydict[c] = df_dxy
         dshare = ad.shared_doubletons(ac_subpops)
         doubdict[c] = dshare
         jsfsdict = ad.jsfs(ac_subpops)
-        f2 = pF2(c, ac_subpops)
+        f2 = pF2(ac_subpops)
         f2dict[c] = f2
 
     # Diversity statistics
     sfsdict = {}
+    pidict = {}
+    tajddict = {}
+    thetadict = {}
     for c in chrlist:
         var.geno(c, meta)
         print("\nStats for Chromosome {}\n".format(c))
@@ -155,3 +168,9 @@ if __name__ == '__main__':
         ac_subpops = var.gt.count_alleles_subpops(popdict, max_allele=2)
         sfs = asfs.sfs_plot(c, ac_subpops)
         sfsdict[c] = sfs
+        pi = av.pi(c, chrlen[c], ac_subpops, var.pos, plot=True)
+        pidict[c] = pi
+        d = av.tajd(c, chrlen[c], ac_subpops, var.pos, plot=True)
+        tajddict[c] = d
+        t = av.theta(c, chrlen[c], ac_subpops, var.pos, plot=True)
+        thetadict[c] = t

@@ -9,7 +9,7 @@ Created on Fri Jun 30 16:28:17 2017
 import numpy as np
 
 
-def access_mask_fx(chrmaskdict, nchr):
+def access_mask(chrmaskdict, nchr):
     """
     """
     chrlen = chrmaskdict[nchr]

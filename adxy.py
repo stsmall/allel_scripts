@@ -15,34 +15,22 @@ sns.set_style('white')
 sns.set_style('ticks')
 
 
-def windDxy(dxy, blen, pos):
-    """Genome plot of Dxy along the chrom
-    """
-    dxy_blocks = allel.stats.moving_statistic(dxy, statistic=np.nanmean,
-                                              size=blen)
-    y = dxy_blocks
-    # use the block centres as the X coordinate
-    x = allel.stats.moving_statistic(pos,
-                                     statistic=lambda v: (v[0] + v[-1])/2,
-                                     size=blen)
-    return(x, y)
-
-
-def plot_dxy(dxydict, pops, chrom, save=False):
+def plot_dxy(dxydict, pops, chrom, chrsize, save=False):
     """Genome plot of FST along the chrom
     """
     for p in pops:
         f = [key for key in dxydict.keys() if p in key]
         fig, ax = plt.subplots(figsize=(10, 4))
         sns.despine(ax=ax, offset=5)
-        m = []
-        title = "{}_FST".format(p)
+        title = "{}_Dxy".format(p)
         for pp in f:
-            m.extend(dxydict[pp][3][0])
-            ax.plot(dxydict[pp][3][0], dxydict[pp][3][1], lw=.5, label=pp)
-        ax.set_ylabel('$F_{ST}$')
+            nx = dxydict[pp][2][1]
+            x = [(np.sum(i)-1)/2 for i in nx]  # need midpoints
+            y = dxydict[pp][2][0]
+            ax.plot(x, y, lw=.5, label=pp)
+        ax.set_ylabel('$D_{XY}$')
         ax.set_xlabel('Chromosome {} position (bp)'.format(chrom))
-        ax.set_xlim(0, max(m))
+        ax.set_xlim(0, chrsize)
         ax.legend(loc='upper left', bbox_to_anchor=(1, 1))
         fig.suptitle(title, y=1.02)
         fig.tight_layout()
@@ -51,26 +39,35 @@ def plot_dxy(dxydict, pops, chrom, save=False):
     return(None)
 
 
-def pairDxy(c, ac_subpops, var, popdict, blenw=10000, plot=False):
+def pairDxy(c, chrsize, ac_subpops, pos, plot=False, blenw=10000, nwindow=100):
     """Calculates DXY
     """
     dxydict = {}
-    pos = var.pos
+    windlen = int(chrsize / nwindow)
     for x, y in combinations(ac_subpops.keys(), 2):
+        # segregating only ?
         acu = ac_subpops[x] + ac_subpops[y]
         flt = acu.is_segregating() & (acu.max_allele() == 1)
-        print('retaining', np.count_nonzero(flt), 'SNPs')
+        print("{} retaining {} SNPs".format("{}-{}".format(x, y),
+                                            np.count_nonzero(flt)))
         posflt = pos[flt]
         ac1 = allel.AlleleCountsArray(ac_subpops[x].compress(flt,
                                                              axis=0)[:, :2])
         ac2 = allel.AlleleCountsArray(ac_subpops[y].compress(flt,
                                                              axis=0)[:, :2])
-        dxy = allel.stats.diversity.mean_pairwise_difference_between(ac1, ac2)
-        dxy_blocks = allel.stats.moving_statistic(dxy, statistic=np.nanmean,
-                                                  size=blenw)
-        dxy_m, dxy_se, _, _ = jackknife(dxy_blocks)
-        dxy_windowed = windDxy(dxy, int(blenw/5), posflt)
-        dxydict["{}-{}".format(x, y)] = (dxy, dxy_m, dxy_se, dxy_windowed)
+        # all sites
+#        ac1 = ac_subpops[x]
+#        ac2 = ac_subpops[y]
+#        posflt = pos
+        # whole chrom
+        dxy = allel.windowed_divergence(posflt, ac1, ac2, size=blenw,
+                                        start=1, stop=chrsize)
+        dxy_m, dxy_se, *f = jackknife(dxy[0])
+        dxy_windowed = allel.windowed_divergence(posflt, ac1, ac2,
+                                                 size=windlen, start=1,
+                                                 stop=chrsize)
+        dxy4plot = (dxy_windowed[0], dxy_windowed[1])
+        dxydict["{}-{}".format(x, y)] = (dxy_m, dxy_se, dxy4plot)
     if plot:
-        plot_dxy(dxydict, list(ac_subpops.keys()), var.chrm)
+        plot_dxy(dxydict, list(ac_subpops.keys()), c, chrsize)
     return(dxydict)

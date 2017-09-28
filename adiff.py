@@ -28,7 +28,6 @@ def shared_doubletons(ac_subpops):
         s = np.sum([d2[x], d2[y]], axis=0)
         sd = np.nonzero(s == 2)[0].shape[0]
         dshare["{}-{}".format(x, y)] = sd
-    print("{}".format(sd))
     return(dshare)
 
 

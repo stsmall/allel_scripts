@@ -8,13 +8,13 @@ Created on Fri Sep 22 16:56:47 2017
 
 import allel
 import numpy as np
-#np.seterr(divide='ignore', invalid='ignore')
+# np.seterr(divide='ignore', invalid='ignore')
 from itertools import combinations
 from itertools import permutations
 from autil import jackknife
 
 
-def pF2(ac_subpops, blenw):
+def pF2(ac_subpops, blenw=10000):
     """
     """
     f2dict = {}
@@ -36,7 +36,7 @@ def pF2(ac_subpops, blenw):
     return(f2dict)
 
 
-def pF3(ac_subpops, blenw):
+def pF3(ac_subpops, blenw=10000):
     """Patterson F3
     """
     f3dict = {}
@@ -57,7 +57,7 @@ def pF3(ac_subpops, blenw):
     return(f3dict)
 
 
-def pF4(ac_subpops, blenw):
+def pF4(ac_subpops, blenw=10000):
     """Patterson F4
     """
     f4dict = {}
