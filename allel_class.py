@@ -66,6 +66,7 @@ class Chr(object):
         """
         """
         misscount = genotypes.count_missing(axis=1)
+        # .20 will remove sites with > 20% missing data
         missarray = misscount <= (genotypes.n_samples * prctmiss)
         # remove missing
         self.gt = genotypes.compress(missarray, axis=0)

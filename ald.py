@@ -101,7 +101,6 @@ def ld_decay(c, chrsize, ac_subpops, popdict, pop2color, var, min_maf=0.1,
     """
     """
     lddict = {}
-    fig, ax = plt.subplots()
     for x in ac_subpops.keys():
         acu = ac_subpops[x]
         pos = var.pos
