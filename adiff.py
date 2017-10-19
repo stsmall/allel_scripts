@@ -59,7 +59,8 @@ def jsfs(ac_subpops, fold=True, save=False):
         if fold:
             jsfs = allel.stats.joint_sfs_folded(ac1[:, :2], ac2[:, :2])
         else:
-            jsfs = allel.stats.joint_sfs(ac1[:, 1], ac2[:, 1])  # here 1 is alt count
+            jsfs = allel.stats.joint_sfs(ac1[:, 1], ac2[:, 1])
+            # here 1 is alt count
         jsfs_plot(jsfs, x, y, fold, save)
         jsfsdict["{}-{}".format(x, y)] = jsfs
     return(jsfsdict)

@@ -65,25 +65,19 @@ class Chr(object):
     def miss(self, genotypes, positions, prctmiss):
         """
         """
-#        missarray = np.ones(genotypes.n_variants, dtype=bool)
-#        is_missing = genotypes.is_missing()
-#        for i, miss in enumerate(is_missing):
-#            if sum(miss)/float(genotypes.n_samples) > prctmiss:
-#                # prctmiss = 0 for non-missing sites
-#                missarray[i] = False
         misscount = genotypes.count_missing(axis=1)
         missarray = misscount <= (genotypes.n_samples * prctmiss)
         # remove missing
-        self.gt_m = genotypes.compress(missarray, axis=0)
+        self.gt = genotypes.compress(missarray, axis=0)
         # adjust positions
-        self.pos_m = positions[missarray]
+        self.pos = positions[missarray]
 
     def seg(self, genotypes, positions):
         """
         """
         var_seg = genotypes.count_alleles().is_segregating()
-        self.pos_s = positions[var_seg]
-        self.gt_s = genotypes.compress(var_seg)
+        self.pos = positions[var_seg]
+        self.gt = genotypes.compress(var_seg)
 
     def mac(self, genotypes, positions, mac):
         """
@@ -94,6 +88,6 @@ class Chr(object):
         fltsingle = (allelecounts.max_allele() == 1) &\
             (allelecounts[:, :2].min(axis=1) > mac)  # biallelic only
         # remove singletons
-        self.gt_c = genotypes.compress(fltsingle, axis=0)
+        self.gt = genotypes.compress(fltsingle, axis=0)
         # adjust positions
-        self.pos_c = positions[fltsingle]
+        self.pos = positions[fltsingle]

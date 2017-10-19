@@ -23,7 +23,7 @@ def fixdiff(ac_subpops, popdict):
         loc_df = allel.locate_fixed_differences(ac1, ac2)
         diff = sum(loc_df)
         diffalleles["{}-{}".format(x, y)] = diff
-        print("{}-{}:{}".format(x, y, diff))
+        print("{}-{} fixdiff:{}".format(x, y, diff))
     return(diffalleles)
 
 
@@ -33,6 +33,7 @@ def privalleles(ac_subpops, popdict):
     """
     segs = []
     pops = []
+    priv = {}
     for pop in ac_subpops.keys():
         ac = ac_subpops[pop].is_segregating()
         segs.append(ac)
@@ -42,8 +43,9 @@ def privalleles(ac_subpops, popdict):
     c = np.where(b == 1)[0]  # find where only 1 is true
     d = a[:, c]  # return array of private
     for p in range(a.shape[0]):
-        print("{}:{}".format(pops[p], np.count_nonzero(d[p, :])))
-    return(None)
+        priv[pops[p]] = np.count_nonzero(d[p, :])
+        print("{} Private:{}".format(pops[p], np.count_nonzero(d[p, :])))
+    return(priv)
 
 
 def misspos(chrm, callset, pc, samples, window_size=10000, title=None,
@@ -66,7 +68,7 @@ def misspos(chrm, callset, pc, samples, window_size=10000, title=None,
             left = bisect.bisect_left(varpos, j)
             right = bisect.bisect_left(varpos, x[i+1]) - 1
             yy.append(np.mean(miss_site[left:right]))
-        except:
+        except Exception:
             yy.append(0)
     y = np.array(yy)
     ap.plotmiss(x, y/samples, title, chrm, saved)
@@ -101,6 +103,8 @@ def popstats(chrlist, meta, popdict, var):
     """
     """
     chrstatdict = defaultdict(dict)
+    diff = defaultdict(dict)
+    priv = defaultdict(dict)
     for c in chrlist:
         var.geno(c, meta)
         print("\nStats for Chromosome {}\n".format(c))
@@ -119,6 +123,6 @@ def popstats(chrlist, meta, popdict, var):
             alt = gt_subpop.count_hom_ref()
             print("{} hets, homalt: {} {}".format(pop, het, alt))
             chrstatdict[c][pop] = (seg, sing, doub)
-        privalleles(ac_subpops, popdict)
-        diff = fixdiff(ac_subpops, popdict)
-    return(chrstatdict, diff)
+        priv[c] = privalleles(ac_subpops, popdict)
+        diff[c] = fixdiff(ac_subpops, popdict)
+    return(chrstatdict, diff, priv)

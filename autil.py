@@ -7,8 +7,23 @@ Created on Fri Sep 15 15:40:01 2017
 """
 
 import allel
+from collections import defaultdict
 import numpy as np
 import seaborn as sns
+
+
+def catdict(chrdict):
+    """
+    """
+    diversity = defaultdict(list)
+    for c in chrdict.keys():
+        for p in chrdict[c].keys():
+            diversity[p].append(chrdict[c][p][2][0])
+    divsum = {}
+    for p in diversity.keys():
+        x = np.concatenate(diversity[p])
+        divsum[p] = x[~np.isnan(x)]
+    return(divsum)
 
 
 def popcols(popdict):
@@ -24,22 +39,34 @@ def popcols(popdict):
     return(pop2color)
 
 
-def subpops(var, meta, kary=False):
+def subpops(var, meta, bypop=False, bykary=False):
     """Define subpops
     """
     popdict = {}
-    if kary:
+    if bykary and not bypop:
         if var.pop is not "All":
             meta = meta.ix[meta.Population.isin(var.pop)]
         else:
             pass  # meta = meta
         for kar in meta.ChromForm.unique():
             popdict[kar] = meta[meta.ChromForm == kar].index.tolist()
-    else:
+    elif bypop and not bykary:
         if var.pop is not "All":
             meta = meta.ix[meta.Population.isin(var.pop)]
         for pop in meta.Population.unique():
             popdict[pop] = meta[meta.Population == pop].index.tolist()
+    elif bypop and bykary:
+        popdict = defaultdict(dict)
+        if var.pop is not "All":
+            meta = meta.ix[meta.Population.isin(var.pop)]
+        else:
+            pass
+        for kar in meta.ChromForm.unique():
+            kpop = meta.ix[meta.ChromForm == kar]
+            for pop in kpop.Population.unique():
+                popdict[kar][pop] = kpop[kpop.Population == pop].index.tolist()
+    else:
+        popdict["BurkinaFaso"] = meta.index.tolist()
     return(popdict)
 
 

@@ -15,12 +15,12 @@ sns.set_style('white')
 sns.set_style('ticks')
 
 
-def div_plot(divdict, pops, chrom, chrsize, name, save=False):
+def div_plot(divdict, pops, chrom, chrsize, name, save=True):
     """
     """
     fig, ax = plt.subplots(figsize=(10, 4))
     sns.despine(ax=ax, offset=5)
-    title = name
+    title = "{}-{}".format(name, chrom)
     for p in pops:
         nx = divdict[p][2][1]
         x = [(np.sum(i)-1)/2 for i in nx]  # need midpoints
@@ -45,7 +45,7 @@ def pi(c, chrsize, ac_subpops, pos, plot=False, blenw=10000, nwindow=100):
     for x in ac_subpops.keys():
         acu = ac_subpops[x]
         flt = acu.is_segregating() & (acu.max_allele() == 1)
-        print('retaining', np.count_nonzero(flt), 'SNPs')
+        print('PI : retaining', np.count_nonzero(flt), 'SNPs')
         posflt = pos[flt]
         ac = allel.AlleleCountsArray(ac_subpops[x].compress(flt,
                                                             axis=0)[:, :2])
@@ -69,7 +69,7 @@ def theta(c, chrsize, ac_subpops, pos, plot=False, blenw=10000, nwindow=100):
     for x in ac_subpops.keys():
         acu = ac_subpops[x]
         flt = acu.is_segregating() & (acu.max_allele() == 1)
-        print('retaining', np.count_nonzero(flt), 'SNPs')
+        print('Theta : retaining', np.count_nonzero(flt), 'SNPs')
         posflt = pos[flt]
         ac = allel.AlleleCountsArray(ac_subpops[x].compress(flt,
                                                             axis=0)[:, :2])
@@ -93,7 +93,7 @@ def tajd(c, chrsize, ac_subpops, pos, plot=False, blenw=10000, nwindow=100):
     for x in ac_subpops.keys():
         acu = ac_subpops[x]
         flt = acu.is_segregating() & (acu.max_allele() == 1)
-        print('retaining', np.count_nonzero(flt), 'SNPs')
+        print('TajD : retaining', np.count_nonzero(flt), 'SNPs')
         posflt = pos[flt]
         ac = allel.AlleleCountsArray(ac_subpops[x].compress(flt,
                                                             axis=0)[:, :2])

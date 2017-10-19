@@ -9,14 +9,15 @@ import allel
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from allel.util import asarray_ndim, check_dim0_aligned, ensure_dim1_aligned
-from itertools import combinations
 
 
 def plotvars(chrm, callset, window_size=10000, title=None, saved=False):
     """
     """
-#    chrm = chrm.decode("utf-8")
+    try:
+        chrm = chrm.decode("utf-8")
+    except AttributeError:
+        chrm = chrm
     chrom = callset['variants/CHROM']
     chrom_mask = np.where(chrom[:] == chrm)
     pos = callset['variants/POS']
@@ -38,9 +39,9 @@ def plotvars(chrm, callset, window_size=10000, title=None, saved=False):
     if title:
         ax.set_title(title)
     else:
-        ax.set_title(chrm.decode("utf-8"))
+        ax.set_title(chrm)
     if saved:
-        fig.savefig("{}.vars.pdf".format(chrm.decode("utf-8")),
+        fig.savefig("{}.vars.pdf".format(chrm),
                     bbox_inches='tight')
 
 
@@ -71,6 +72,10 @@ def plotmiss(x, y, title, chrm, saved):
     """
     """
     # plot
+    try:
+        chrm = chrm.decode("utf-8")
+    except AttributeError:
+        chrm = chrm
     fig, ax = plt.subplots(figsize=(12, 3))
     sns.despine(ax=ax, offset=10)
     ax.plot(x, y)
@@ -79,7 +84,29 @@ def plotmiss(x, y, title, chrm, saved):
     if title:
         ax.set_title(title)
     else:
-        ax.set_title(chrm.decode("utf-8"))
+        ax.set_title(chrm)
     if saved:
-        fig.savefig("{}.miss.pdf".format(chrm.decode("utf-8")),
+        fig.savefig("{}.miss.pdf".format(chrm),
                     bbox_inches='tight')
+
+
+def divboxplot(diversity, pop2color):
+    """
+    """
+    poplist = list(pop2color.keys())
+    fig, ax = plt.subplots(figsize=(4, 4))
+    sns.despine(ax=ax, offset=5)
+    lw = 1.5
+    box = ax.boxplot(
+        x=[diversity[pop] for pop in poplist],
+        labels=poplist,  patch_artist=True,
+        medianprops={"color": "k", "linewidth": lw},
+        whiskerprops={"color": "k"},
+        capprops={"color": "k"},
+        showfliers=False,
+        flierprops={"c": "k", "markersize": 2})
+    ax.set_ylabel(r'$\pi$', rotation=0, fontsize=16)
+    for patch, color in zip(box['boxes'], [pop2color[pop] for pop in poplist]):
+        patch.set_facecolor(color)
+        patch.set_linewidth(lw)
+    fig.savefig("piboxplot.pdf", bbox_inches="tight")

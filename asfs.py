@@ -27,7 +27,7 @@ def sfs_plot(c, ac_subpops, save=False, fold=True, scale=True):
     for pop in ac_subpops.keys():
         acu = ac_subpops[pop]
         flt = acu.is_segregating() & (acu.max_allele() == 1)
-        print('retaining', np.count_nonzero(flt), 'SNPs')
+        print('SFS : retaining', np.count_nonzero(flt), 'SNPs')
         ac1 = allel.AlleleCountsArray(ac_subpops[pop].compress(flt,
                                                                axis=0)[:, :2])
         if fold and scale:

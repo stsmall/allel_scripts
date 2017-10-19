@@ -15,7 +15,7 @@ ac = gt.count_alleles(max_allele=2).compute
 
 @author: scott
 """
-
+from imp import reload
 import allel
 import argparse
 import numpy as np
@@ -26,12 +26,13 @@ import astat
 from allel_class import Chr
 import apca as apca
 import autil as autil
-import afst as afst
+#import afst as afst
 import adxy as adxy
 import adiff as ad
-from af234 import pF2
+#from af234 import pF2
 import asfs as asfs
 import adiv as av
+import ald as ald
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-fa', '--fasta', help='path to fasta genome')
@@ -85,21 +86,21 @@ if __name__ == '__main__':
     genome, gff3, meta = loadgenome_extradata_fx(fasta_handle, gff3_handle,
                                                  meta)
 
-    meta = "kirfol.meta.txt.csv"
+    meta = "/home/scott/Documents/Wb/Wb_sWGA/data_files/allel/WbAllpops.47.info"
     meta = pd.read_csv(meta, delimiter=",")
-    var = Chr('All', 'KirFol.2L.flt.h5')
-    popdict = autil.subpops(var, meta)
-#    chrlist = np.unique(var.chrm[:])
-    chrlist = [b'scaffold12|size1081276', b'scaffold1|size7451746']
-    chrlen = {}
-    for a in chrlist:
-        k = a.decode('utf-8').split('|')
-        s = int(k[1].lstrip('size'))
-        chrlen[a] = s
+    var = Chr('All', 'WbAllpops.impute.allchr.47.h5')
+    popdict = autil.subpops(var, meta, bypop=True, bykary=False)
     pop2color = autil.popcols(popdict)
+    chrlist = np.unique(var.chrm[:])
+    # chrlist = del chrlist['Wb_ChrX_0']
+    chrlen = {}
+    with open("/home/scott/Documents/Wb/Wb_sWGA/data_files/allel/chr_info", 'r') as c:
+        for line in c:
+            x = line.strip().split()
+            chrlen[x[0]] = int(x[1])
 
     # number of samples and list of chromosomes
-    n_samples = len(var.calls['samples\n'])
+    n_samples = len(var.calls['samples'])
     print("number of samples: {}".format(n_samples))
     print("list of loaded chromosomes: {}".format(chrlist))
 
@@ -108,7 +109,7 @@ if __name__ == '__main__':
     # Chr stats
     astat.chrstats(chrlist, var.calls, miss, n_samples)
     # Population Stats
-    diff, chrstatdict = astat.popstats(chrlist, meta, popdict, var)
+    chrstatdict, diff, priv = astat.popstats(chrlist, meta, popdict, var)
 
     # PCA and LD thin
     thinpos = {}
@@ -119,14 +120,14 @@ if __name__ == '__main__':
         print(c)
         var.geno(c, meta)
         var.miss(var.gt, var.pos, 0)  # use only sites without missing data
-        gn, thinp = autil.ldthin(var.gt_m, var.pos_m, "thin", iters=5)
+        gn, thinp = autil.ldthin(var.gt, var.pos, "thin", iters=5)
         gnudict[c] = gn
         thinpos[c] = thinp
     for c in gnudict.keys():
         # PCA
         gn = gnudict[c]
         coords, model = apca.pca_fx(gn, meta, c, pop2color, False, var.pop,
-                                    bykary=False)
+                                    bykary=True)
         pcadict[c] = (coords, model)
 
     # ADMIXTURE input files
@@ -142,19 +143,23 @@ if __name__ == '__main__':
     jsfsdict = {}
     for c in chrlist:
         var.geno(c, meta)
+        # var.miss(var.gt, var.pos, .20)
+        # var.mac(var.gt, var.pos, 1)
         print("\nStats for Chromosome {}\n".format(c))
         # allele count object
         ac_subpops = var.gt.count_alleles_subpops(popdict, max_allele=2)
-        df_FST = afst.pairFST(c, chrlen[c], ac_subpops, var, popdict,
-                              plot=True)
-        fstdict[c] = df_FST
+        # TODO: error with Wb
+#        df_FST = afst.pairFST(c, chrlen[c], ac_subpops, var, popdict,
+#                              plot=True)
+#        fstdict[c] = df_FST
         df_dxy = adxy.pairDxy(c, chrlen[c], ac_subpops, var.pos, plot=True)
         dxydict[c] = df_dxy
+#        jsfsdict = ad.jsfs(ac_subpops, save=False)
         dshare = ad.shared_doubletons(ac_subpops)
         doubdict[c] = dshare
-        jsfsdict = ad.jsfs(ac_subpops)
-        f2 = pF2(ac_subpops)
-        f2dict[c] = f2
+# TODO: fix f2
+#        f2 = pF2(ac_subpops)
+#        f2dict[c] = f2
 
     # Diversity statistics
     sfsdict = {}
@@ -164,8 +169,10 @@ if __name__ == '__main__':
     for c in chrlist:
         var.geno(c, meta)
         print("\nStats for Chromosome {}\n".format(c))
+        # var.miss(var.gt, var.pos, .20)
+        # var.mac(var.gt, var.pos, 1)
         # allele count object
-        ac_subpops = var.gt.count_alleles_subpops(popdict, max_allele=2)
+        ac_subpops = var.gt.count_alleles_subpops(popdict, max_allele=1)
         sfs = asfs.sfs_plot(c, ac_subpops)
         sfsdict[c] = sfs
         pi = av.pi(c, chrlen[c], ac_subpops, var.pos, plot=True)
@@ -174,3 +181,14 @@ if __name__ == '__main__':
         tajddict[c] = d
         t = av.theta(c, chrlen[c], ac_subpops, var.pos, plot=True)
         thetadict[c] = t
+    # diversity box plot: sumdict() autil then boxplot in aplot
+    # LD decay plot
+    lddict = {}
+    for c in chrlist:
+        var.geno(c, meta)
+        print("\nStats for Chromosome {}\n".format(c))
+        var.miss(var.gt, var.pos, .20)
+        # allele count object
+        ac_subpops = var.gt.count_alleles_subpops(popdict, max_allele=1)
+        lddict[c] = ald.ld_decay(c, chrlen[c], ac_subpops, popdict,
+                                 pop2color, var)
