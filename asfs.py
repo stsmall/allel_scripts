@@ -13,7 +13,7 @@ sns.set_style('white')
 sns.set_style('ticks')
 
 
-def sfs_plot(c, ac_subpops, save=False, fold=True, scale=True):
+def sfs_plot(c, ac_subpops, save=True, fold=True, scale=True):
     """
     note: should filter on segregating if only using subset of pops
     note: only biallelic if >1 allele
@@ -28,16 +28,16 @@ def sfs_plot(c, ac_subpops, save=False, fold=True, scale=True):
         acu = ac_subpops[pop]
         flt = acu.is_segregating() & (acu.max_allele() == 1)
         print('SFS : retaining', np.count_nonzero(flt), 'SNPs')
-        ac1 = allel.AlleleCountsArray(ac_subpops[pop].compress(flt,
-                                                               axis=0)[:, :2])
+        # ac1 = allel.AlleleCountsArray(ac_subpops[pop].compress(flt, axis=0)[:, :2])
+        ac1 = allel.AlleleCountsArray(ac_subpops[pop].compress(flt, axis=0))
         if fold and scale:
-            sfs = allel.stats.sfs_folded_scaled(ac1)
+            sfs = allel.sfs_folded_scaled(ac1)
         elif fold and not scale:
-            sfs = allel.stats.sfs_folded(ac1)
+            sfs = allel.sfs_folded(ac1)
         elif not fold and not scale:
-            sfs = allel.stats.sfs(ac1)
+            sfs = allel.sfs(ac1[:, 1])
         elif not fold and scale:
-            sfs = allel.stats.sfs_scaled(ac1)
+            sfs = allel.sfs_scaled(ac1[:, 1])
         sfsdict[pop] = sfs
         allel.stats.plot_sfs_folded_scaled(sfsdict[pop], ax=ax, label=pop,
                                            n=ac1.sum(axis=1).max())

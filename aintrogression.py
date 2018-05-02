@@ -39,19 +39,25 @@ RNDmin: dmin / dout
     also use genome average, X, in anopheles assuming that region is not
     introgressed.
 
-1) call all SNPs on a single genome
-2) call SNPs on specific reference genome
-    a) carry over all coordinates for a new vcf
-        i) Maffilter --vcf
-        ii) mvftools  # not a traditional vcf so some issues with analysis
-        iii) Emrich script
+F_D (Martin 2015)
+
+R_D (Racimo 2016)
+
+U20 (Racimo 2016, Jagoda 2018)
+
+Q95 (Racimo 2016, Jagoda 2018)
+
+Dp_intro (Racimo 2016)
+
+Dp_combo (Racimo 2016)
+
+r2_intro (Racimo 2016)
+
+r2_combo (Racimo 2016)
+
 """
-allel.windowed_df
-pairwise diff
+
 Dxy
 Dxy_min
 Dxy_mean
-pariwiseDistance
-pairwiseDistancerankamongsamples
 Dxy_vector
-Snn

@@ -37,7 +37,7 @@ def div_plot(divdict, pops, chrom, chrsize, name, save=True):
     return(None)
 
 
-def pi(c, chrsize, ac_subpops, pos, plot=False, blenw=10000, nwindow=100):
+def pi(c, chrsize, ac_subpops, pos, plot=False, blenw=1000, nwindow=100):
     """
     """
     pidict = {}
@@ -85,7 +85,7 @@ def theta(c, chrsize, ac_subpops, pos, plot=False, blenw=10000, nwindow=100):
     return(thetadict)
 
 
-def tajd(c, chrsize, ac_subpops, pos, plot=False, blenw=10000, nwindow=100):
+def tajd(c, chrsize, ac_subpops, pos, plot=False, blenw=1000, nwindow=100):
     """
     """
     tajddict = {}

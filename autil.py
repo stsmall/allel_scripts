@@ -93,8 +93,8 @@ def jackknife(x):
     return(m, se, z, vals)
 
 
-def ldthin(geno, positions, method, mac=1, size=100, step=20, thresh=.1,
-           iters=1):
+def ldthin(geno, positions, method, rsize=50000, mac=1, size=100, step=20,
+           thresh=.1, iters=1):
     """.take if coord, .compress if mask
     """
     ac = geno.count_alleles()
@@ -104,7 +104,7 @@ def ldthin(geno, positions, method, mac=1, size=100, step=20, thresh=.1,
     print("Available site for PCA: {}".format(np.count_nonzero(pca_selection)))
     if 'random' in method:
         indices = np.nonzero(pca_selection)[0]
-        indices_ds = np.random.choice(indices, size=50000, replace=False)
+        indices_ds = np.random.choice(indices, size=rsize, replace=False)
         indices_ds.sort()
         genotypes_pca = geno.take(indices_ds, axis=0)
         # sites with missing data can return error

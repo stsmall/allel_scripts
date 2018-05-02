@@ -12,24 +12,30 @@ ac = gt.count_alleles(max_allele=2).compute
 # gt = allel.GenotypeArray(callset['calldata/GT'])
 # gt[variants, samples], gt[1:3, :] 2-4th variant all samples
 # gt[:, 0:2], all variants, 1st and 2nd samples
+gt.compress(mask)
+gt.take(actual_indexes)
+gt.subset()
 
 @author: scott
 """
+from __future__ import division
+from __future__ import print_function
 from imp import reload
 import allel
 import argparse
 import numpy as np
 import pandas as pd
 import pyfasta
+
 # functions
 import astat
 from allel_class import Chr
 import apca as apca
 import autil as autil
-#import afst as afst
+import afst as afst
 import adxy as adxy
 import adiff as ad
-#from af234 import pF2
+from af234 import pF2
 import asfs as asfs
 import adiv as av
 import ald as ald
@@ -86,9 +92,11 @@ if __name__ == '__main__':
     genome, gff3, meta = loadgenome_extradata_fx(fasta_handle, gff3_handle,
                                                  meta)
 
-    meta = "/home/scott/Documents/Wb/Wb_sWGA/data_files/allel/WbAllpops.47.info"
+    #meta = "/home/scott/Documents/Wb/Wb_sWGA/data_files/allel/WbAllpops.47.info"
+    meta = "/home/scott/Desktop/AnopSG_liftvcf/AnopSG.55.info"
     meta = pd.read_csv(meta, delimiter=",")
-    var = Chr('All', 'WbAllpops.impute.allchr.47.h5')
+    #var = Chr('All', 'WbAllpops.impute.allchr.47.h5')
+    var = Chr('All', '/home/scott/Desktop/AnopSG_liftvcf/2L.SNP.recode.h5')
     popdict = autil.subpops(var, meta, bypop=True, bykary=False)
     pop2color = autil.popcols(popdict)
     chrlist = np.unique(var.chrm[:])
@@ -173,8 +181,8 @@ if __name__ == '__main__':
         # var.mac(var.gt, var.pos, 1)
         # allele count object
         ac_subpops = var.gt.count_alleles_subpops(popdict, max_allele=1)
-        sfs = asfs.sfs_plot(c, ac_subpops)
-        sfsdict[c] = sfs
+        #sfs = asfs.sfs_plot(c, ac_subpops)
+        #sfsdict[c] = sfs
         pi = av.pi(c, chrlen[c], ac_subpops, var.pos, plot=True)
         pidict[c] = pi
         d = av.tajd(c, chrlen[c], ac_subpops, var.pos, plot=True)
@@ -192,3 +200,13 @@ if __name__ == '__main__':
         ac_subpops = var.gt.count_alleles_subpops(popdict, max_allele=1)
         lddict[c] = ald.ld_decay(c, chrlen[c], ac_subpops, popdict,
                                  pop2color, var)
+
+
+
+
+x = []
+for p in tajddict.keys():
+    x.append((tajddict[p]["Haiti"][2][0]))
+m = np.concatenate(x).ravel()
+n = m[~np.isnan(m)]
+b,bins,patches = plt.hist(n, 50, density=True)

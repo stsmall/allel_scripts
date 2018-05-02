@@ -25,11 +25,6 @@ def plot_pca_coords(coords, model, pc1, pc2, ax, samples, pop2color):
         ax.plot(x[flt], y[flt], marker='o', linestyle=' ',
                 color=pop2color[pop], label=pop, markersize=6, mec='k',
                 mew=.5)
-#    pop_colours = {
-#        'Haiti': '#FF0000',
-#        'Kenya': '#008000',
-#        'Mali': '#00FFFF',
-#        'PNG': '#90EE90'}
     ax.set_xlabel('PC%s (%.1f%%)' % (pc1+1,
                   model.explained_variance_ratio_[pc1]*100))
     ax.set_ylabel('PC%s (%.1f%%)' % (pc2+1,
