@@ -157,14 +157,14 @@ if __name__ == '__main__':
         # allele count object
         ac_subpops = var.gt.count_alleles_subpops(popdict, max_allele=2)
         # TODO: error with Wb
-#        df_FST = afst.pairFST(c, chrlen[c], ac_subpops, var, popdict,
-#                              plot=True)
-#        fstdict[c] = df_FST
+        # df_FST = afst.pairFST(c, chrlen[c], ac_subpops, var, popdict,
+        #                      plot=True)
+        #fstdict[c] = df_FST
         df_dxy = adxy.pairDxy(c, chrlen[c], ac_subpops, var.pos, plot=True)
         dxydict[c] = df_dxy
 #        jsfsdict = ad.jsfs(ac_subpops, save=False)
-        dshare = ad.shared_doubletons(ac_subpops)
-        doubdict[c] = dshare
+#        dshare = ad.shared_doubletons(ac_subpops)
+#        doubdict[c] = dshare
 # TODO: fix f2
 #        f2 = pF2(ac_subpops)
 #        f2dict[c] = f2
