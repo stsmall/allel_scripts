@@ -241,6 +241,6 @@ if __name__ == "__main__":
         U2099 = np.quantile(U20[0], 0.99)
         jointQuants = (Q95[0] >= Q9599) * (U20[0] >= U2099)
         out = Q95[1][jointQuants]
-        n = np.repeat(c, len(out))
+        n = [[name, c]] * len(out)
         outBed = np.hstack((n, out))
         np.savetxt("{}.{}.windows.out".format(name, c), outBed, '%5.0f', delimiter="\t")
