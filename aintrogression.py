@@ -203,12 +203,12 @@ def adaptPlot(Q, chrom, name, p, save=True):
 
 if __name__ == "__main__":
     makeh5fromvcf(args.vcfFile, 1, args.h5)
-    #meta = "AnopSG.40.info"
+    meta = "AnopSG.40.info"
     #meta = "AnopSG.50.info"
     meta = args.meta
     meta = pd.read_csv(meta, delimiter=",")
-    #var = Chr('All',"AnfunSG.liftover.biSNP.40.NoMiss.AiTests.recode.h5")
-    #var = Chr('All',"AnfunSG.liftover.biSNP.50.NoMiss.AiTests.recode.h5")
+    var = Chr('All',"AnfunSG.liftover.biSNP.40.NoMiss.AiTests.recode.h5")
+    #var = Chr('All',"../AnfunSG.liftover.biSNP.50.NoMiss.AiTests.recode.h5")
     var = Chr('All', "{}.h5".format(args.vcfFile))
     popdict = autil.subpops(var, meta, bypop=True, bykary=False)
     pop2color = autil.popcols(popdict)
@@ -219,19 +219,20 @@ if __name__ == "__main__":
               "2R": 54617495,
               "X": 20138207}
     pops = list(popdict.values())
-    out, target, bait = args.out, args.target, args.bait
-    # out, target, bait = "Fun", "Van", "Par"
-    # out, target, bait = "Par", "Van", "Fun"
-    # out, target, bait = "Par", "Fun", "Like"
-    # out, target, bait = "Par", "Like", "Fun"
-    out, target, bait = "Van", "Long", "Par"
-    # out, target, bait = "Par", "Long", "Van"
-    name = "{}_{}_{}".format(out, target, bait)
+    outgrp, target, bait = args.out, args.target, args.bait
+    # outgrp, target, bait = "Fun", "Van", "Par"
+    # outgrp, target, bait = "Par", "Van", "Fun"
+    # outgrp, target, bait = "Par", "Fun", "Like"
+    # outgrp, target, bait = "Par", "Like", "Fun"
+    # outgrp, target, bait = "Van", "Long", "Par"
+    # outgrp, target, bait = "Par", "Long", "Van"
+    # outgrp, target, bait = "Fun", "Par", "Like"
+    name = "{}_{}_{}".format(outgrp, target, bait)
     for c in chrlist:
         var.geno(c, meta)
-        Q95 = QninetyFive(var.pos, var.gt, popdict[out], popdict[target], popdict[bait], chrlen[c])
+        Q95 = QninetyFive(var.pos, var.gt, popdict[outgrp], popdict[target], popdict[bait], chrlen[c])
         adaptPlot(Q95, c, name, 'Q95')
-        U20 = Utwenty(var.pos, var.gt, popdict[out], popdict[target], popdict[bait], chrlen[c])
+        U20 = Utwenty(var.pos, var.gt, popdict[outgrp], popdict[target], popdict[bait], chrlen[c])
         adaptPlot(U20, c, name, 'U20')
         vq = np.stack([Q95[1][:, 0], Q95[1][:, 1], Q95[0]], axis=1)
         vu = np.stack([U20[1][:, 0], U20[1][:, 1], U20[0]], axis=1)
@@ -240,7 +241,11 @@ if __name__ == "__main__":
         Q9599 = np.quantile(Q95[0], 0.99)
         U2099 = np.quantile(U20[0], 0.99)
         jointQuants = (Q95[0] >= Q9599) * (U20[0] >= U2099)
-        out = Q95[1][jointQuants]
-        n = [[name, c]] * len(out)
-        outBed = np.hstack((n, out))
-        np.savetxt("{}.{}.windows.out".format(name, c), outBed, '%5.0f', delimiter="\t")
+        Aiout = Q95[1][jointQuants]
+        n = [[name, c]] * len(Aiout)
+        outBed = np.hstack((n, Aiout))
+        f = open("{}.{}.windows.out".format(name, c), 'w')
+        for i in outBed:
+            f.write("{}\n".format("\t".join(i)))
+        f.close()
+        #np.savetxt("{}.{}.windows.out".format(name, c), outBed, delimiter="\t")
