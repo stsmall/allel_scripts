@@ -7,8 +7,10 @@ Assorted functions for using scikit allel
 """
 import allel
 import numpy as np
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import seaborn as sns
+mpl.rcParams['pdf.fonttype'] = 42
 
 
 def plotvars(chrm, callset, window_size=10000, title=None, saved=False):

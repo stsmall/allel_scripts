@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 chrom = callset['variants/CHROM']
@@ -16,7 +16,7 @@ gt.compress(mask)
 gt.take(actual_indexes)
 gt.subset()
 
-@author: scott
+@author: stsmall
 """
 from __future__ import division
 from __future__ import print_function
@@ -92,12 +92,13 @@ if __name__ == '__main__':
     genome, gff3, meta = loadgenome_extradata_fx(fasta_handle, gff3_handle,
                                                  meta)
 
-    meta = "AnopSG.55.info"
+    meta = "/home/scott/Documents/Wb/Wb_sWGA/data_files/allel/WbAllpops.47.info"
     meta = pd.read_csv(meta, delimiter=",")
-    var = Chr('All', '2L.FSG.SNP.recode.h5')
+    var = Chr('All', 'WbAllpops.impute.allchr.47.h5')
     popdict = autil.subpops(var, meta, bypop=True, bykary=False)
     pop2color = autil.popcols(popdict)
     chrlist = np.unique(var.chrm[:])
+    # chrlist = del chrlist['Wb_ChrX_0']
     chrlen = {}
     with open("chr_info", 'r') as c:
         for line in c:
@@ -199,20 +200,11 @@ if __name__ == '__main__':
                                  pop2color, var)
 
 
-import matplotlib.pyplot as plt
-# tajd histogram
+
+
 x = []
 for p in tajddict.keys():
-    x.append((tajddict[p]["Fun"][2][0]))
+    x.append((tajddict[p]["Haiti"][2][0]))
 m = np.concatenate(x).ravel()
 n = m[~np.isnan(m)]
 b,bins,patches = plt.hist(n, 50, density=True)
-
-# pi histogram
-x = []
-for p in pidict.keys():
-    x.append((pidict[p]["Par"][2][0]))
-m = np.concatenate(x).ravel()
-n = m[~np.isnan(m)]
-b, bins, patches = plt.hist(n, 50, density=True)
-

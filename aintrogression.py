@@ -49,9 +49,9 @@ F_D: (Martin 2015)
 
 R_D: (Racimo 2016)
 
-U20: (Racimo 2016, Jagoda 2018)
+Utwenty: (Racimo 2016, Jagoda 2018)
 
-Q95: (Racimo 2016, Jagoda 2018)
+QninetyFive: (Racimo 2016, Jagoda 2018)
 
 Dp_intro: (Racimo 2016)
 
@@ -175,10 +175,62 @@ def QninetyFive(pos, gt, out, target, bait, clen, ofreq=0.01, winSize=10000, win
     return(Q95)
 
 
-def Fd(pos, gt, out, target, bait, ofreq=0.01, winSize=10000, winStep=None):
+def F_d(pos, gt, out, target, bait, ofreq=0.01, winSize=10000, winStep=None):
     """Fd from Martin 2015
     """
     return(None)
+
+
+def Dout():
+    """
+    dout: (dXO + dYO) / 2
+    average distance between species X and the Outgroup and Species Y and the
+    Outgroup.
+    """
+
+
+def Dxy():
+    """
+    dxy: pairwise distance / bases; low values possible introgression
+    dxy as number of sequence diff between any 2 sequences, x and y, in two
+    taxa, X and Y (divided by the number of sites), then dxy is the average
+    distance between all sequences in the two species. # above assumes no
+    variation in neutral mutation rate, low mutation rate can be mistaken for
+    recent introgression
+    """
+
+
+def Dmin():
+    """
+    REQUIRES PHASES, HAPLOTYPEARRAY
+    dmin: min(dxy), requires haplotypes
+    minimum distance among all pairing of haplotypes in the 2 species. Pvalue
+    by coalescent with no migration or from other parts of the genome average.
+    # above assumes no variation in neutral mutation rate, low mutation rate
+    can be mistaken for recent introgression
+    """
+
+
+def RND():
+    """
+    RND (relative node depth): dxy / dout
+     Robust to low mutation rates like HKY test if neutrality. # not sensitive
+     to low-frequency migrants.
+    calculate Dxy in windows on haplotypeArray between Species X and Y
+    calculate Dxy between Species X and Outgroup
+    calculate Dxy between Species Y and Outgroup
+    """
+#    Dxy/ Dout
+
+
+def RNDmin():
+    """
+    RNDmin: dmin / dout
+    Similarly, like both dmin and Gmin, RNDmin should be sensitive to even rare
+    migrant haplotypes. In addition, we expect RNDmin to be powerful even when
+    migrants are high in frequency
+    """
+#    Dmin/Dout
 
 
 def adaptPlot(Q, chrom, name, p, save=True):

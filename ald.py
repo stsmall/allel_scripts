@@ -6,8 +6,10 @@ Created on Thu Jun 29 14:51:31 2017
 @author: scott
 """
 import allel
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import seaborn as sns
+mpl.rcParams['pdf.fonttype'] = 42
 import numpy as np
 import scipy
 from collections import defaultdict
