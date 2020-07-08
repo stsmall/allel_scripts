@@ -75,6 +75,7 @@ import argparse
 import pandas as pd
 from allel_class import Chr
 import autil as autil
+from itertools import combinations
 sns.set_style('white')
 sns.set_style('ticks')
 
@@ -198,7 +199,18 @@ def Dxy():
     variation in neutral mutation rate, low mutation rate can be mistaken for
     recent introgression
     """
-
+    # Dxy
+    dxydict = {}
+    for c in chrlen.keys():
+        var = Chr('All', '{}.FSG.SNP.recode.h5'.format(c))
+        var.geno(c, meta)
+        # var.miss(var.gt, var.pos, .20)
+        # var.mac(var.gt, var.pos, 1)
+        print("\nStats for Chromosome {}\n".format(c))
+        # allele count object
+        ac_subpops = var.gt.count_alleles_subpops(popdict, max_allele=2)
+        df_dxy = adxy.pairDxy(c, chrlen[c], ac_subpops, var.pos, plot=True)
+        dxydict[c] = df_dxy
 
 def Dmin():
     """
@@ -211,7 +223,7 @@ def Dmin():
     """
 
 
-def RND():
+def RND(dxydict, sp1, out):
     """
     RND (relative node depth): dxy / dout
      Robust to low mutation rates like HKY test if neutrality. # not sensitive
@@ -220,7 +232,23 @@ def RND():
     calculate Dxy between Species X and Outgroup
     calculate Dxy between Species Y and Outgroup
     """
-#    Dxy/ Dout
+    out = "Riv"
+    sp1 = ["Van", "Par", "FunMoz", "Long", "Like"]
+    RNDdict = {}
+    chrdict = {}
+    for c in chrlen.keys():
+        for i, j in combinations(sp1, 2):
+            try:
+                dxyP = dxydict[c]["{}-{}".format(i, j)][2][0]
+            except KeyError:
+                dxyP = dxydict[c]["{}-{}".format(j, i)][2][0]
+            dxy1out = dxydict[c]["{}-{}".format(i, out)][2][0]
+            dxy2out = dxydict[c]["{}-{}".format(j, out)][2][0]
+            dxyout = (dxy1out + dxy2out) / 2.0
+            chrdict["{}-{}".format(i, j)] = dxyP / dxyout
+    RNDdict[c] = chrdict
+        # window = RNDdict[c][][2][1]
+    return(RNDdict)
 
 
 def RNDmin():

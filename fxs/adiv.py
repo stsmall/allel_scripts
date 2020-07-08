@@ -6,30 +6,36 @@ Created on Mon May 15 18:15:38 2017
 @author: scott
 """
 
-import allel
-import matplotlib.pyplot as plt
-import seaborn as sns
-import numpy as np
 from autil import jackknife
-sns.set_style('white')
-sns.set_style('ticks')
+import allel
+import numpy as np
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+import matplotlib.lines as mlines
+import seaborn as sns
+mpl.rcParams['pdf.fonttype'] = 42
 
 
-def div_plot(divdict, pops, chrom, chrsize, name, save=True):
+def div_plot(divdict, pop2color, poplist, chrom, chrsize, name, save=True):
     """
     """
     fig, ax = plt.subplots(figsize=(10, 4))
     sns.despine(ax=ax, offset=5)
     title = "{}-{}".format(name, chrom)
-    for p in pops:
-        nx = divdict[p][2][1]
+    for pops in poplist:
+        nx = divdict[pops][2][1]
         x = [(np.sum(i)-1)/2 for i in nx]  # need midpoints
-        y = divdict[p][2][0]
-        ax.plot(x, y, lw=.5, label=p)
+        y = divdict[pops][2][0]
+        ax.plot(x, y, lw=.5, label=pops, color=pop2color[pops])
     ax.set_ylabel(name)
     ax.set_xlabel('Chromosome {} position (bp)'.format(chrom))
     ax.set_xlim(0, chrsize)
-    ax.legend(loc='upper left', bbox_to_anchor=(1, 1))
+    ##### plot legend
+    handle = []
+    for p in poplist:
+        handle.append(mlines.Line2D([], [], color=pop2color[p], label=p))
+    ax.legend(handles=handle, title='Population', bbox_to_anchor=(1, 1), loc='upper left')    
+    #####
     fig.suptitle(title, y=1.02)
     fig.tight_layout()
     if save:
@@ -37,7 +43,7 @@ def div_plot(divdict, pops, chrom, chrsize, name, save=True):
     return(None)
 
 
-def pi(c, chrsize, ac_subpops, pos, plot=False, blenw=1000, nwindow=100):
+def pi(c, chrsize, ac_subpops, pos, pop2color, plot=False, blenw=1000, nwindow=100):
     """
     """
     pidict = {}
@@ -57,11 +63,11 @@ def pi(c, chrsize, ac_subpops, pos, plot=False, blenw=1000, nwindow=100):
         pidict[x] = (pi_m, pi_se, (pi_windowed[0], pi_windowed[1]))
 
     if plot:
-        div_plot(pidict, list(ac_subpops.keys()), c, chrsize, "pi")
+        div_plot(pidict, pop2color, list(ac_subpops.keys()), c, chrsize, "pi")
     return(pidict)
 
 
-def theta(c, chrsize, ac_subpops, pos, plot=False, blenw=10000, nwindow=100):
+def theta(c, chrsize, ac_subpops, pos, pop2color, plot=False, blenw=10000, nwindow=100):
     """
     """
     thetadict = {}
@@ -81,11 +87,11 @@ def theta(c, chrsize, ac_subpops, pos, plot=False, blenw=10000, nwindow=100):
                                                         stop=chrsize)
         thetadict[x] = (t_m, t_se, (theta_windowed[0], theta_windowed[1]))
     if plot:
-        div_plot(thetadict, list(ac_subpops.keys()), c, chrsize, "theta")
+        div_plot(thetadict, pop2color, list(ac_subpops.keys()), c, chrsize, "theta")
     return(thetadict)
 
 
-def tajd(c, chrsize, ac_subpops, pos, plot=False, blenw=1000, nwindow=100):
+def tajd(c, chrsize, ac_subpops, pos, pop2color, plot=False, blenw=1000, nwindow=100):
     """
     """
     tajddict = {}
@@ -106,5 +112,5 @@ def tajd(c, chrsize, ac_subpops, pos, plot=False, blenw=1000, nwindow=100):
 #        tajd_sizevars = allel.moving_tajima_d(ac, size=size)
         tajddict[x] = (d_m, d_se, (tajd_windowed[0], tajd_windowed[1]))
     if plot:
-        div_plot(tajddict, list(ac_subpops.keys()), c, chrsize, "Tajima's D")
+        div_plot(tajddict, pop2color, list(ac_subpops.keys()), c, chrsize, "Tajima's D")
     return(tajddict)

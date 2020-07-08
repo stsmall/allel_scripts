@@ -15,7 +15,7 @@ sns.set_style('white')
 sns.set_style('ticks')
 
 
-def plot_dxy(dxydict, pops, chrom, chrsize, save=False):
+def plot_dxy(dxydict, pop2color, pops, chrom, chrsize, save=False):
     """Genome plot of FST along the chrom
     """
     for p in pops:
@@ -39,7 +39,7 @@ def plot_dxy(dxydict, pops, chrom, chrsize, save=False):
     return(None)
 
 
-def pairDxy(c, chrsize, ac_subpops, pos, plot=False, blenw=10000, nwindow=100):
+def pairDxy(c, chrsize, ac_subpops, pos, pop2color, plot=False, blenw=10000, nwindow=100):
     """Calculates DXY
     """
     dxydict = {}
@@ -69,5 +69,5 @@ def pairDxy(c, chrsize, ac_subpops, pos, plot=False, blenw=10000, nwindow=100):
         dxy4plot = (dxy_windowed[0], dxy_windowed[1])
         dxydict["{}-{}".format(x, y)] = (dxy_m, dxy_se, dxy4plot)
     if plot:
-        plot_dxy(dxydict, list(ac_subpops.keys()), c, chrsize)
+        plot_dxy(dxydict, pop2color, list(ac_subpops.keys()), c, chrsize)
     return(dxydict)

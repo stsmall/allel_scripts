@@ -9,11 +9,47 @@ import allel
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import matplotlib.lines as mlines
 import seaborn as sns
 mpl.rcParams['pdf.fonttype'] = 42
 
 
-def plotvars(chrm, callset, window_size=10000, title=None, saved=False):
+def plotvars2(chrm, ac_subpops, pos, pop2color, window_size=100000, title=None, saved=True):
+    """
+    """
+    fig, ax = plt.subplots(figsize=(10, 4))
+    sns.despine(ax=ax, offset=5)
+    poplist = list(ac_subpops.keys())
+    bins = np.arange(0, pos.max(), window_size)
+    for pops in poplist:
+        print(pops)
+        acu = ac_subpops[pops]
+        flt = acu.is_segregating()
+        varpos = pos[flt]
+        # use window midpoints as x coordinate
+        x = (bins[1:] + bins[:-1])/2
+        # compute variant density in each window
+        h, _ = np.histogram(varpos, bins=bins)
+        y = h / window_size
+        ax.plot(x, y, lw=.5, label=pops, color=pop2color[pops])
+    ax.set_xlabel('Chromosome position (bp)')
+    ax.set_ylabel('Variant density (bp$^{-1}$)')
+    ##### plot legend
+    handle = []
+    for p in poplist:
+        handle.append(mlines.Line2D([], [], color=pop2color[p], label=p))
+    ax.legend(handles=handle, title='Population', bbox_to_anchor=(1, 1), loc='upper left')    
+    #####
+    if title:
+        ax.set_title(title)
+    else:
+        ax.set_title(chrm)
+    if saved:
+        fig.savefig("{}.vars.pdf".format(chrm), bbox_inches='tight')
+    return(None)
+
+
+def plotvars(chrm, callset, window_size=100000, title=None, saved=True):
     """
     """
     try:
@@ -43,34 +79,31 @@ def plotvars(chrm, callset, window_size=10000, title=None, saved=False):
     else:
         ax.set_title(chrm)
     if saved:
-        fig.savefig("{}.vars.pdf".format(chrm),
-                    bbox_inches='tight')
+        fig.savefig("{}.vars.pdf".format(chrm), bbox_inches='tight')
 
 
-def plotstats(pc, title, pop2colors, saved=False):
+def plotstats(pc, title, pop2color, saved=False):
     """
     """
     fig, ax = plt.subplots(figsize=(12, 4))
     sns.despine(ax=ax, offset=10)
     left = np.arange(len(pc))
-    colors = [pop2colors[p] for p in pop2colors.keys()]
+    poplist = list(pop2color.keys())
+    colors = [pop2color[p] for p in poplist]
     ax.bar(left, pc, color=colors)
     ax.set_xlim(0, len(pc))
     ax.set_xlabel('Sample index')
     ax.set_ylabel('Percent calls')
     ax.set_title(title)
-#    handles, labels = ax.get_legend_handles_labels()
-#    ax.legend(handles, labels, title="Population", bbox_to_anchor=(1, 1),
-#              loc='upper left')
-    handles = ["mtl.patches.Patch(color={}, label={})".format(pop2colors[p], p)
-               for p in pop2colors.keys()]
-    ax.legend(handles=handles, labels=list(pop2colors.keys()),
-              title='Population', bbox_to_anchor=(1, 1), loc='upper left')
+    handle = []
+    for p in poplist:
+        handle.append(mlines.Line2D([], [], color=pop2color[p], label=p))
+    ax.legend(handles=handle, title='Population', bbox_to_anchor=(1, 1), loc='upper left')    
     if saved:
         fig.savefig("{}.pdf".format(title), bbox_inches='tight')
 
 
-def plotmiss(x, y, title, chrm, saved):
+def plotmiss(x, y, title, pop2color, chrm, saved):
     """
     """
     # plot
@@ -78,9 +111,15 @@ def plotmiss(x, y, title, chrm, saved):
         chrm = chrm.decode("utf-8")
     except AttributeError:
         chrm = chrm
+    poplist = list(pop2color.keys())
     fig, ax = plt.subplots(figsize=(12, 3))
     sns.despine(ax=ax, offset=10)
-    ax.plot(x, y)
+    colors = [pop2color[p] for p in poplist]
+    ax.plot(x, y, color=colors)
+    handle = []
+    for p in poplist:
+        handle.append(mlines.Line2D([], [], color=pop2color[p], label=p))
+    ax.legend(handles=handle, title='Population', bbox_to_anchor=(1, 1), loc='upper left')    
     ax.set_xlabel('Chromosome position (bp)')
     ax.set_ylabel('Missing Count')
     if title:
